@@ -18,13 +18,13 @@ export default async function MemorialHero() {
       <div className="absolute inset-0 bg-paper/55 sm:bg-gradient-to-r sm:from-paper/85 sm:via-paper/40 sm:to-paper/5" />
 
       <div className="relative mx-auto flex h-full max-w-[1400px] flex-col items-center gap-5 px-5 py-9 text-center sm:flex-row sm:items-center sm:gap-8 sm:py-8 sm:text-left md:px-10">
-        <div className="relative h-40 w-32 shrink-0 overflow-hidden rounded-sm border-4 border-paper shadow-[0_10px_40px_-12px_rgba(3,4,94,0.45)] sm:order-2 sm:h-[calc(100%-3.5rem)] sm:w-[clamp(150px,20vw,260px)] sm:self-center">
+        <div className="relative h-52 w-[10.5rem] shrink-0 overflow-hidden rounded-sm border-4 border-paper shadow-[0_10px_40px_-12px_rgba(3,4,94,0.45)] sm:order-2 sm:h-[calc(100%-3.5rem)] sm:w-[clamp(150px,20vw,260px)] sm:self-center">
           <Image
             src={profile.portraitUrl || '/images/portrait.jpg'}
             alt={`Portrait of ${profile.fullName}`}
             fill
             priority
-            sizes="(max-width: 640px) 128px, 260px"
+            sizes="(max-width: 640px) 168px, 260px"
             className="object-cover object-top"
           />
         </div>

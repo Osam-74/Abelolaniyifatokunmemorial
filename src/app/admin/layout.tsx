@@ -58,23 +58,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
 
       <div className="mx-auto grid max-w-[1400px] gap-8 px-5 py-8 md:px-8 lg:grid-cols-[220px_1fr] lg:gap-12">
-        <nav aria-label="Admin sections" className="lg:sticky lg:top-8 lg:self-start">
+        <nav
+          aria-label="Admin sections"
+          className="rounded-sm bg-ink p-3 text-mist lg:sticky lg:top-8 lg:self-start"
+        >
           <Link
             href={base}
-            className="block rounded-sm px-3 py-2 font-util text-sm transition-colors hover:bg-ink/[0.06]"
+            className="block rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
           >
             Overview
           </Link>
           <Link
             href={`${base}/settings`}
-            className="block rounded-sm px-3 py-2 font-util text-sm transition-colors hover:bg-ink/[0.06]"
+            className="block rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
           >
             Website settings
           </Link>
 
           {groups.map((group) => (
-            <div key={group} className="mt-6">
-              <p className="px-3 font-util text-[0.62rem] uppercase tracking-[0.16em] text-ink/35">
+            <div key={group} className="mt-5">
+              <p className="px-3 font-util text-[0.62rem] uppercase tracking-[0.16em] text-soft/60">
                 {group}
               </p>
               <div className="mt-1.5">
@@ -82,11 +85,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <Link
                     key={collection.slug}
                     href={`${base}/${collection.slug}`}
-                    className="flex items-center justify-between gap-2 rounded-sm px-3 py-2 font-util text-sm transition-colors hover:bg-ink/[0.06]"
+                    className="flex items-center justify-between gap-2 rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
                   >
                     <span>{collection.label}</span>
                     {counts[collection.slug] > 0 && (
-                      <span className="rounded-full bg-deep px-1.5 py-0.5 text-[0.62rem] font-medium text-mist">
+                      <span className="rounded-full bg-bright px-1.5 py-0.5 text-[0.62rem] font-medium text-ink">
                         {counts[collection.slug]}
                       </span>
                     )}

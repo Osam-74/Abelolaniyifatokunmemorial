@@ -5,11 +5,47 @@ import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { query, queryOne } from '@/lib/db';
-import { requireSession } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 import { findCollection, SETTING_GROUPS, type Collection, type FieldDef } from '@/lib/collections';
 import { getAdminBase } from '@/lib/adminPath';
 
 export type ActionState = { ok: boolean; message: string } | null;
+
+/**
+ * Server actions must never throw: an uncaught error becomes an opaque
+ * "server-side exception" page with only a digest, which tells nobody anything.
+ */
+function explain(error: unknown, what: string): ActionState {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.error(`[admin] ${what} failed: ${detail}`);
+
+  if (/column .* does not exist|relation .* does not exist/i.test(detail)) {
+    return {
+      ok: false,
+      message:
+        'The database is missing a recent update. Go to Overview and press "Update the database", then try again.',
+    };
+  }
+  if (/DATABASE_URL/i.test(detail)) {
+    return { ok: false, message: 'The database is not connected. Check DATABASE_URL in your environment variables.' };
+  }
+  if (/duplicate key/i.test(detail)) {
+    return { ok: false, message: 'Something with that web address already exists. Choose a different one.' };
+  }
+  if (/timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND/i.test(detail)) {
+    return { ok: false, message: 'Could not reach the database. Try again in a moment.' };
+  }
+  return {
+    ok: false,
+    message: process.env.DEBUG_AUTH === '1' ? `Could not save: ${detail}` : 'Could not save. Please try again.',
+  };
+}
+
+/** redirect() works by throwing, so it must be allowed through. */
+function isRedirect(error: unknown): boolean {
+  return typeof (error as { digest?: unknown })?.digest === 'string'
+    && String((error as { digest: string }).digest).startsWith('NEXT_REDIRECT');
+}
 
 /* ─────────────── Helpers ─────────────── */
 
@@ -54,10 +90,16 @@ function refresh(collection: Collection) {
 
 export async function saveRow(_prev: ActionState, form: FormData): Promise<ActionState> {
   try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
+    return await saveRowInner(form);
+  } catch (error) {
+    if (isRedirect(error)) throw error;
+    return explain(error, 'saving a record');
   }
+}
+
+async function saveRowInner(form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
 
   const slug = String(form.get('__collection') ?? '');
   const collection = findCollection(slug);
@@ -84,7 +126,7 @@ export async function saveRow(_prev: ActionState, form: FormData): Promise<Actio
     }
   }
 
-  try {
+  {
     if (id) {
       const assignments = columns.map((column, i) => `${column} = $${i + 1}`).join(', ');
       await query(`UPDATE ${collection.table} SET ${assignments} WHERE id = $${columns.length + 1}`, [
@@ -107,12 +149,6 @@ export async function saveRow(_prev: ActionState, form: FormData): Promise<Actio
         values
       );
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    if (message.includes('duplicate key')) {
-      return { ok: false, message: 'That web address is already used by another story. Choose a different one.' };
-    }
-    return { ok: false, message: `Could not save: ${message}` };
   }
 
   refresh(collection);
@@ -120,11 +156,8 @@ export async function saveRow(_prev: ActionState, form: FormData): Promise<Actio
 }
 
 export async function deleteRow(slug: string, id: number): Promise<void> {
-  try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
-  }
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
   const collection = findCollection(slug);
   if (!collection) return;
   await query(`DELETE FROM ${collection.table} WHERE id = $1`, [id]);
@@ -132,11 +165,8 @@ export async function deleteRow(slug: string, id: number): Promise<void> {
 }
 
 export async function setStatus(slug: string, id: number, status: string): Promise<void> {
-  try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
-  }
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
   const collection = findCollection(slug);
   if (!collection?.moderated) return;
   if (!['pending', 'approved', 'rejected'].includes(status)) return;
@@ -145,11 +175,8 @@ export async function setStatus(slug: string, id: number, status: string): Promi
 }
 
 export async function toggleFeatured(slug: string, id: number, value: boolean): Promise<void> {
-  try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
-  }
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
   const collection = findCollection(slug);
   if (!collection) return;
   if (!collection.fields.some((f) => f.name === 'featured')) return;
@@ -161,59 +188,69 @@ export async function toggleFeatured(slug: string, id: number, value: boolean): 
 
 export async function saveSettings(_prev: ActionState, form: FormData): Promise<ActionState> {
   try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
-  }
+    const session = await getSession();
+    if (!session) redirect(`${await getAdminBase()}/login`);
 
-  const key = String(form.get('__key') ?? '');
-  const group = SETTING_GROUPS.find((g) => g.key === key);
-  if (!group) return { ok: false, message: 'That settings group does not exist.' };
+    const key = String(form.get('__key') ?? '');
+    const group = SETTING_GROUPS.find((g) => g.key === key);
+    if (!group) return { ok: false, message: 'That settings group does not exist.' };
 
-  const existing = await queryOne<{ value: Record<string, unknown> }>(
-    'SELECT value FROM settings WHERE key = $1',
-    [key]
-  );
-  const value: Record<string, unknown> = { ...(existing?.value ?? {}) };
+    const existing = await queryOne<{ value: unknown }>('SELECT value FROM settings WHERE key = $1', [key]);
 
-  for (const field of group.fields) {
-    if (field.name === 'phones') {
-      value.phones = String(form.get('phones') ?? '')
-        .split(',')
-        .map((phone) => phone.trim())
-        .filter(Boolean);
-      continue;
+    // Postgres may hand back jsonb already parsed, or as text.
+    let current: Record<string, unknown> = {};
+    if (existing?.value && typeof existing.value === 'object') {
+      current = existing.value as Record<string, unknown>;
+    } else if (typeof existing?.value === 'string') {
+      try {
+        current = JSON.parse(existing.value);
+      } catch {
+        current = {};
+      }
     }
-    value[field.name] = coerce(field, form.get(field.name));
+
+    const value: Record<string, unknown> = { ...current };
+
+    for (const field of group.fields) {
+      if (field.name === 'phones') {
+        value.phones = String(form.get('phones') ?? '')
+          .split(',')
+          .map((phone) => phone.trim())
+          .filter(Boolean);
+        continue;
+      }
+      value[field.name] = coerce(field, form.get(field.name));
+    }
+
+    await query(
+      `INSERT INTO settings (key, value, updated_at) VALUES ($1, $2::jsonb, now())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+      [key, JSON.stringify(value)]
+    );
+
+    revalidatePath('/', 'layout');
+    return { ok: true, message: 'Saved. The website has been updated.' };
+  } catch (error) {
+    if (isRedirect(error)) throw error;
+    return explain(error, 'saving settings');
   }
-
-  await query(
-    `INSERT INTO settings (key, value, updated_at) VALUES ($1, $2, now())
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-    [key, JSON.stringify(value)]
-  );
-
-  revalidatePath('/', 'layout');
-  return { ok: true, message: 'Saved. The website has been updated.' };
 }
 
 /* ─────────────── First-run setup ─────────────── */
 
 export async function runSetup(): Promise<ActionState> {
-  try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
-  }
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
   try {
     const sql = await readFile(join(process.cwd(), 'src/lib/schema.sql'), 'utf8');
     await query(sql);
     revalidatePath('/', 'layout');
     return { ok: true, message: 'Database tables are ready.' };
   } catch (error) {
+    if (isRedirect(error)) throw error;
     return {
       ok: false,
-      message: `Could not create the tables: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `Could not update the database: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }
@@ -223,11 +260,8 @@ export async function runSetup(): Promise<ActionState> {
 export async function savePhotoBatch(
   photos: { url: string; caption: string; album: string; takenOn: string }[]
 ): Promise<{ ok: boolean; message: string }> {
-  try {
-    await requireSession();
-  } catch {
-    redirect(`${await getAdminBase()}/login`);
-  }
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
 
   const usable = photos.filter((photo) => photo.url.trim());
   if (usable.length === 0) return { ok: false, message: 'No photographs were ready to add.' };

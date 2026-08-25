@@ -53,7 +53,7 @@ export default async function AdminHome() {
         </p>
       </div>
 
-      {(!connected || !tablesReady) && <SetupPanel connected={connected} />}
+      <SetupPanel connected={connected} tablesReady={tablesReady} />
 
       {pendingTotal > 0 && (
         <div className="rounded-sm border border-deep/30 bg-bright/10 px-6 py-5">
