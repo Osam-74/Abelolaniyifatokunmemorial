@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminConfigProblem } from '@/lib/firebase';
+import { firebaseProjectId } from '@/lib/verifyFirebaseToken';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,11 @@ export async function GET() {
       length: secret.length,
     },
     adminEmails: { count: emails.length, ok: emails.length > 0 },
-    firebaseServer: {
+    signIn: {
+      projectId: Boolean(firebaseProjectId()),
+      ready: Boolean(firebaseProjectId()) && secret.length >= 24 && emails.length > 0,
+    },
+    firebaseStorage: {
       ok: adminConfigProblem() === null,
       problem: adminConfigProblem(),
       storageBucket: Boolean(process.env.FIREBASE_STORAGE_BUCKET),
