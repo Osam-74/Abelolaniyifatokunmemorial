@@ -2,12 +2,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import Reveal from '@/components/Reveal';
+import MemorialSidebar from '@/components/MemorialSidebar';
+import SubmissionForm from '@/components/SubmissionForm';
+import { submitTribute } from '@/lib/actions';
 import { getProfile, getSetting, safeQuery, lifespan, formatDate } from '@/lib/content';
 
 export const revalidate = 60;
 export const metadata = { title: 'About' };
 
 type Section = { id: number; heading: string; body: string; image_url: string; pull_quote: string };
+type Tribute = {
+  id: number; name: string; relationship: string; location: string; message: string; created_at: string;
+};
 
 export default async function AboutPage() {
   const [profile, intro, sections] = await Promise.all([
@@ -16,11 +22,16 @@ export default async function AboutPage() {
     safeQuery<Section>('SELECT id, heading, body, image_url, pull_quote FROM bio_sections ORDER BY sort_order, id'),
   ]);
 
+  const tributes = await safeQuery<Tribute>(
+    `SELECT id, name, relationship, location, message, created_at FROM tributes
+     WHERE status = 'approved' ORDER BY featured DESC, created_at DESC LIMIT 9`
+  );
+
   const facts = [
     { label: 'Full name', value: profile.fullName },
-    { label: 'Born', value: formatDate(profile.birthDate) || 'To be added' },
-    { label: 'Place of birth', value: profile.birthPlace || 'To be added' },
-    { label: 'Passed away', value: formatDate(profile.deathDate) || 'To be added' },
+    { label: 'Born', value: formatDate(profile.birthDate) },
+    { label: 'Place of birth', value: profile.birthPlace },
+    { label: 'Passed away', value: formatDate(profile.deathDate) },
   ].filter((f) => f.value);
 
   return (
@@ -32,7 +43,7 @@ export default async function AboutPage() {
       />
 
       <section className="bg-paper py-[length:var(--spacing-section)]">
-        <div className="mx-auto grid max-w-[1400px] gap-14 px-5 md:px-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+        <div className="mx-auto grid max-w-[1400px] gap-14 px-5 md:px-10 lg:grid-cols-[280px_1fr_300px] lg:gap-12">
           <Reveal>
             <div className="lg:sticky lg:top-28">
               <div className="relative aspect-[3/4] overflow-hidden rounded-t-full rounded-b-sm bg-mist">
@@ -105,13 +116,65 @@ export default async function AboutPage() {
             ))}
 
             <Reveal>
+              <section id="tributes" className="scroll-mt-32 border-t border-ink/12 pt-10">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <h2 className="text-[length:var(--text-title)]">Tributes</h2>
+                  <Link href="/tributes" className="btn btn-ghost">Leave a tribute</Link>
+                </div>
+
+                {tributes.length > 0 ? (
+                  <ul className="mt-9 space-y-4">
+                    {tributes.map((tribute) => (
+                      <li
+                        key={tribute.id}
+                        className="lift rounded-sm border border-ink/10 bg-mist/35 p-6"
+                      >
+                        <p className="leading-relaxed text-ink/80">{tribute.message}</p>
+                        <p className="mt-4 font-util text-[0.7rem] uppercase tracking-[0.12em] text-ink/45">
+                          {[tribute.name, tribute.relationship, tribute.location, formatDate(tribute.created_at)]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-6 text-ink/60">
+                    No tributes have been published yet. Yours could be the first.
+                  </p>
+                )}
+
+                <div className="mt-10 rounded-sm border border-ink/12 bg-paper p-7">
+                  <h3 className="font-display text-xl">Leave a tribute</h3>
+                  <p className="mt-2 text-[0.92rem] text-ink/60">
+                    Every message is read by the family before it appears here.
+                  </p>
+                  <div className="mt-6">
+                    <SubmissionForm
+                      action={submitTribute}
+                      submitLabel="Send my tribute"
+                      fields={[
+                        { name: 'name', label: 'Your name', required: true, half: true },
+                        { name: 'relationship', label: 'How you knew him', half: true },
+                        { name: 'location', label: 'Where you are writing from', half: true },
+                        { name: 'message', label: 'Your tribute', type: 'textarea', rows: 6, required: true },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </section>
+            </Reveal>
+
+            <Reveal>
               <div className="flex flex-wrap gap-3 border-t border-ink/12 pt-10">
-                <Link href="/timeline" className="btn btn-ghost">His timeline</Link>
-                <Link href="/life-and-legacy" className="btn btn-ghost">Life &amp; legacy</Link>
+                <Link href="/life#timeline" className="btn btn-ghost">His timeline</Link>
+                <Link href="/life#legacy" className="btn btn-ghost">His legacy</Link>
                 <Link href="/gallery" className="btn btn-ghost">Photographs</Link>
               </div>
             </Reveal>
           </div>
+
+          <MemorialSidebar />
         </div>
       </section>
     </>

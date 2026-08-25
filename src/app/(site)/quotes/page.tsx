@@ -24,7 +24,7 @@ export default async function QuotesPage() {
           {quotes.length === 0 ? (
             <EmptyState
               title="No sayings have been recorded yet"
-              hint="The family can add the words he was known for from the admin dashboard."
+              hint="The family is still gathering the words he was known for."
             />
           ) : (
             <div className="space-y-20">

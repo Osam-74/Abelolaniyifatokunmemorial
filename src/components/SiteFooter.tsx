@@ -16,7 +16,7 @@ const COLUMNS = [
     heading: 'His life',
     links: [
       { href: '/about', label: 'About' },
-      { href: '/life-and-legacy', label: 'Life & Legacy' },
+      { href: '/life', label: 'Life' },
       { href: '/timeline', label: 'Timeline' },
       { href: '/quotes', label: 'Words of Wisdom' },
     ],

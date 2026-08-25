@@ -82,17 +82,17 @@ const settings = {
 };
 
 const bioSections = [
-  ['Family and early years', 'Where he was born, the family he came from, and the world of Ilora as he first knew it.\n\nEdit this section in the admin dashboard to add his birth year, his parents, and the story of his childhood.', 1],
-  ['Faith', 'A member of the Emmanuel Baptist Church community in Fojubaye, Ilora, faith ran through the ordinary hours of his life, not only the Sunday ones.\n\nEdit this section to add the story of his walk of faith.', 2],
-  ['Work and the years of building', 'The work of his hands, the years of providing, and what he taught by doing rather than saying.\n\nEdit this section to add his trade, his working life, and the achievements the family wants recorded.', 3],
-  ['Marriage and family', 'The family he raised, and the four generations that followed.\n\nEdit this section to add names, dates, and the story of his home.', 4],
-  ['Final years', 'His last seasons, surrounded by the people he had spent his life gathering.\n\nEdit this section to add the closing chapter of his story.', 5],
+  ['Family and early years', 'Where he was born, the family he came from, and the world of Ilora as he first knew it.', 1],
+  ['Faith', 'A member of the Emmanuel Baptist Church community in Fojubaye, Ilora, faith ran through the ordinary hours of his life, not only the Sunday ones.', 2],
+  ['Work and the years of building', 'The work of his hands, the years of providing, and what he taught by doing rather than saying.', 3],
+  ['Marriage and family', 'The family he raised, and the four generations that followed.', 4],
+  ['Final years', 'His last seasons, surrounded by the people he had spent his life gathering.', 5],
 ];
 
 const legacySections = [
   ['Four generations', 'Brother, father, grandfather, great-grandfather. The clearest measure of his life is the number of people who can trace themselves back to him.', 1],
   ['Faith and church', 'His place in the Emmanuel Baptist Church community at Fojubaye, Ilora — the pews he sat in, the people he sat beside.', 2],
-  ['Community', 'What he gave to Ilora, and what Ilora gave back. Edit this section to record the community work, the counsel, and the quiet help.', 3],
+  ['Community', 'What he gave to Ilora, and what Ilora gave back.', 3],
   ['What he taught', 'The habits, sayings and standards his children carry, and now teach their own children.', 4],
 ];
 

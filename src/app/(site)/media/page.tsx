@@ -29,7 +29,7 @@ export default async function MediaPage() {
           {items.length === 0 ? (
             <EmptyState
               title="The media archive is empty"
-              hint="The family can add articles, interviews and publications from the admin dashboard."
+              hint="Anything written about his life will be collected here."
             />
           ) : (
             <ul className="divide-y divide-ink/12 border-y border-ink/12">

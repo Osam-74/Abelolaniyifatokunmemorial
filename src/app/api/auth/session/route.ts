@@ -1,57 +1,66 @@
 import { NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
-import { adminApp, firebaseAdminConfigured } from '@/lib/firebase';
+import { adminApp, firebaseAdminConfigured, adminConfigProblem } from '@/lib/firebase';
 import { createSession, destroySession, isAllowed, allowedEmails } from '@/lib/auth';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-/**
- * Exchanges a Firebase ID token for this site's own session cookie.
- *
- * Firebase proves identity; we decide authorisation here, then issue a short
- * JWT the Edge middleware can verify without the Admin SDK.
- */
+/** Visitors never see the reason; it goes to the server log for whoever runs the site. */
+function refuse(status: number, publicMessage: string, logDetail: string) {
+  console.error(`[sign-in] ${logDetail}`);
+  return NextResponse.json({ error: publicMessage }, { status });
+}
+
+const UNAVAILABLE =
+  'Sign-in is temporarily unavailable. Please try again in a moment, or contact whoever set up this website.';
+
 export async function POST(request: Request) {
-  if (!firebaseAdminConfigured()) {
-    return NextResponse.json(
-      { error: 'Firebase is not configured on the server. Add the service-account variables.' },
-      { status: 501 }
-    );
-  }
-
-  if (allowedEmails().length === 0) {
-    return NextResponse.json(
-      { error: 'No administrators are configured. Set ADMIN_EMAILS in the environment variables.' },
-      { status: 501 }
-    );
-  }
-
-  let idToken: string;
   try {
-    const body = await request.json();
-    idToken = String(body.idToken ?? '');
-    if (!idToken) throw new Error('missing');
-  } catch {
-    return NextResponse.json({ error: 'No sign-in token was received.' }, { status: 400 });
-  }
-
-  try {
-    // checkRevoked catches accounts disabled or signed out in the Firebase console.
-    const decoded = await getAuth(adminApp()).verifyIdToken(idToken, true);
-
-    if (!isAllowed(decoded.email)) {
-      return NextResponse.json(
-        {
-          error:
-            'That account is not permitted to manage this memorial. Ask for your address to be added.',
-        },
-        { status: 403 }
-      );
+    if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 24) {
+      return refuse(503, UNAVAILABLE, 'AUTH_SECRET is missing or shorter than 24 characters.');
+    }
+    if (!firebaseAdminConfigured()) {
+      return refuse(503, UNAVAILABLE, `Firebase Admin not configured. ${adminConfigProblem() ?? ''}`);
+    }
+    if (allowedEmails().length === 0) {
+      return refuse(503, UNAVAILABLE, 'ADMIN_EMAILS is empty, so no one can sign in.');
     }
 
-    if (decoded.firebase?.sign_in_provider === 'password' && decoded.email_verified === false) {
-      // Not fatal, but worth knowing about; accounts are created by hand anyway.
-      console.warn(`Sign-in by unverified email address: ${decoded.email}`);
+    let idToken = '';
+    try {
+      const body = await request.json();
+      idToken = String(body?.idToken ?? '');
+    } catch {
+      /* handled below */
+    }
+    if (!idToken) {
+      return refuse(400, 'Sign-in could not be completed. Please try again.', 'No ID token in request body.');
+    }
+
+    let decoded;
+    try {
+      decoded = await getAuth(adminApp()).verifyIdToken(idToken, true);
+    } catch (error) {
+      const code = (error as { code?: string })?.code ?? '';
+      const detail = error instanceof Error ? error.message : String(error);
+
+      if (code === 'auth/id-token-expired' || code === 'auth/id-token-revoked') {
+        return refuse(401, 'That sign-in has expired. Please try again.', `Token rejected: ${code}`);
+      }
+      // A malformed service account shows up here rather than at start-up.
+      if (/PEM|DECODER|private key|credential/i.test(detail)) {
+        return refuse(503, UNAVAILABLE, `Service account rejected by Google: ${detail}`);
+      }
+      return refuse(401, 'Sign-in could not be verified. Please try again.', `verifyIdToken failed: ${detail}`);
+    }
+
+    if (!isAllowed(decoded.email)) {
+      return refuse(
+        403,
+        'That account is not permitted to manage this memorial.',
+        `Refused ${decoded.email ?? 'unknown address'} — not in ADMIN_EMAILS.`
+      );
     }
 
     await createSession({
@@ -63,15 +72,19 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const code = (error as { code?: string })?.code ?? '';
-    if (code === 'auth/id-token-expired' || code === 'auth/id-token-revoked') {
-      return NextResponse.json({ error: 'That sign-in has expired. Please try again.' }, { status: 401 });
-    }
-    return NextResponse.json({ error: 'Could not verify that sign-in.' }, { status: 401 });
+    return refuse(
+      500,
+      UNAVAILABLE,
+      `Unexpected failure: ${error instanceof Error ? `${error.message}\n${error.stack}` : String(error)}`
+    );
   }
 }
 
 export async function DELETE() {
-  await destroySession();
+  try {
+    await destroySession();
+  } catch {
+    /* clearing a cookie should never fail loudly */
+  }
   return NextResponse.json({ ok: true });
 }

@@ -28,7 +28,7 @@ export default async function TimelinePage() {
           {milestones.length === 0 ? (
             <EmptyState
               title="The timeline is still being built"
-              hint="The family can add each milestone — year, title, description and photograph — from the admin dashboard."
+              hint="The family is still gathering the milestones of his life."
             />
           ) : (
             <ol className="relative">

@@ -25,7 +25,7 @@ async function pendingCounts(): Promise<Record<string, number>> {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
 
-  // The sign-in page renders on its own.
+  // The sign-in and reset pages render on their own.
   if (!session) return <>{children}</>;
 
 

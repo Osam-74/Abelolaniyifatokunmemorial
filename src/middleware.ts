@@ -40,7 +40,8 @@ export async function middleware(request: NextRequest) {
   headers.set(ADMIN_PATH_HEADER, adminPath);
 
   const loginPath = `${adminPath}/login`;
-  if (pathname === loginPath) {
+  const openPaths = [loginPath, `${adminPath}/reset`];
+  if (openPaths.includes(pathname)) {
     return NextResponse.rewrite(target, { request: { headers } });
   }
 

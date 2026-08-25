@@ -23,7 +23,7 @@ export default async function VideosPage() {
           {videos.length === 0 ? (
             <EmptyState
               title="No videos have been added yet"
-              hint="The family can add YouTube, Vimeo or uploaded video links from the admin dashboard."
+              hint="Any recordings the family finds will be added here."
             />
           ) : (
             <VideoGrid videos={videos} />

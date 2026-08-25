@@ -7,12 +7,22 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
-  sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
 import { clientAuth, googleProvider, readableAuthError, firebaseAuthReady } from '@/lib/firebaseClient';
 
-type Mode = 'idle' | 'google' | 'password' | 'reset';
+const UNAVAILABLE =
+  'Sign-in is temporarily unavailable. Please try again in a moment.';
+
+type Mode = 'idle' | 'google' | 'password';
+
+/** Server refusals already carry a sentence meant for people; Firebase codes do not. */
+function describe(error: unknown): string {
+  if (error instanceof Error && (error as { code?: string }).code === undefined) {
+    return error.message || UNAVAILABLE;
+  }
+  return readableAuthError(error) || UNAVAILABLE;
+}
 
 export default function LoginForm({ adminBase }: { adminBase: string }) {
   const router = useRouter();
@@ -40,7 +50,7 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
     if (!response.ok) {
       // Do not leave them signed in to Firebase if we refused them here.
       await signOut(clientAuth()).catch(() => undefined);
-      throw new Error(data.error ?? 'Could not complete sign-in.');
+      throw new Error(data.error ?? UNAVAILABLE);
     }
     router.replace(destination());
     router.refresh();
@@ -49,6 +59,11 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
   const withGoogle = async () => {
     setError('');
     setNotice('');
+    if (!firebaseAuthReady()) {
+      console.error('[sign-in] NEXT_PUBLIC_FIREBASE_* variables are not set.');
+      setError(UNAVAILABLE);
+      return;
+    }
     setBusy('google');
     try {
       const auth = clientAuth();
@@ -56,8 +71,7 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
       const credential = await signInWithPopup(auth, googleProvider());
       await establishSession(await credential.user.getIdToken());
     } catch (err) {
-      const message = err instanceof Error && err.message.length < 200 ? err.message : readableAuthError(err);
-      setError(readableAuthError(err) || message);
+      setError(describe(err));
       setBusy('idle');
     }
   };
@@ -66,6 +80,11 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
     event.preventDefault();
     setError('');
     setNotice('');
+    if (!firebaseAuthReady()) {
+      console.error('[sign-in] NEXT_PUBLIC_FIREBASE_* variables are not set.');
+      setError(UNAVAILABLE);
+      return;
+    }
     setBusy('password');
     try {
       const auth = clientAuth();
@@ -73,36 +92,10 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
       const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
       await establishSession(await credential.user.getIdToken());
     } catch (err) {
-      setError(err instanceof Error && !(err as { code?: string }).code ? err.message : readableAuthError(err));
+      setError(describe(err));
       setBusy('idle');
     }
   };
-
-  const resetPassword = async () => {
-    if (!email.trim()) {
-      setError('Enter your email address first, then choose this again.');
-      return;
-    }
-    setError('');
-    setBusy('reset');
-    try {
-      await sendPasswordResetEmail(clientAuth(), email.trim());
-      setNotice('If that address has an account, a reset link is on its way.');
-    } catch (err) {
-      setError(readableAuthError(err));
-    } finally {
-      setBusy('idle');
-    }
-  };
-
-  if (!firebaseAuthReady()) {
-    return (
-      <p className="text-[0.9rem] leading-relaxed text-flame">
-        Firebase sign-in is not configured. Add the <code>NEXT_PUBLIC_FIREBASE_*</code> variables to
-        the project and redeploy.
-      </p>
-    );
-  }
 
   const working = busy !== 'idle';
 
@@ -175,14 +168,12 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
         </button>
       </form>
 
-      <button
-        type="button"
-        onClick={resetPassword}
-        disabled={working}
-        className="font-util text-[0.7rem] uppercase tracking-[0.11em] text-mist/45 transition-colors hover:text-mist"
+      <a
+        href={`${adminBase}/reset`}
+        className="inline-block font-util text-[0.7rem] uppercase tracking-[0.11em] text-mist/45 transition-colors hover:text-mist"
       >
-        {busy === 'reset' ? 'Sending…' : 'Forgotten your password?'}
-      </button>
+        Forgotten your password?
+      </a>
     </div>
   );
 }

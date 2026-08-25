@@ -5,16 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const NAV = [
-  { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  { href: '/life-and-legacy', label: 'Life & Legacy' },
-  { href: '/timeline', label: 'Timeline' },
+  { href: '/life', label: 'Life' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/stories', label: 'Stories' },
-  { href: '/tributes', label: 'Tributes' },
-  { href: '/videos', label: 'Videos' },
-  { href: '/events', label: 'Funeral & Events' },
-  { href: '/guestbook', label: 'Guestbook' },
 ];
 
 export default function SiteHeader({ initials, name }: { initials: string; name: string }) {
@@ -75,7 +69,7 @@ export default function SiteHeader({ initials, name }: { initials: string; name:
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 xl:flex" aria-label="Main">
+          <nav className="hidden items-center gap-2 lg:flex" aria-label="Main">
             {NAV.map((item) => {
               const active = pathname === item.href;
               return (
@@ -143,7 +137,7 @@ export default function SiteHeader({ initials, name }: { initials: string; name:
 
       <div
         id="mobile-nav"
-        className={`fixed inset-0 z-40 bg-ink transition-opacity duration-300 xl:hidden ${
+        className={`fixed inset-0 z-40 bg-ink transition-opacity duration-300 lg:hidden ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
@@ -151,7 +145,12 @@ export default function SiteHeader({ initials, name }: { initials: string; name:
           className="flex h-full flex-col justify-center gap-1 overflow-y-auto px-8 py-24"
           aria-label="Main"
         >
-          {NAV.concat([{ href: '/candles', label: 'Light a Candle' }]).map((item, i) => (
+          {NAV.concat([
+            { href: '/', label: 'Home' },
+            { href: '/events', label: 'Funeral & Events' },
+            { href: '/guestbook', label: 'Guestbook' },
+            { href: '/candles', label: 'Light a Candle' },
+          ]).map((item, i) => (
             <Link
               key={item.href}
               href={item.href}

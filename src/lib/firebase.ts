@@ -4,42 +4,79 @@ import { getStorage } from 'firebase-admin/storage';
 
 /**
  * Firebase Admin, initialised from environment variables only.
- * Nothing Firebase-related is ever sent to the browser: uploads go through
- * /api/upload, which runs on the server and is behind the admin session.
+ * Nothing Firebase-related is ever sent to the browser: uploads and token
+ * checks run on the server.
  */
 
+/** Environment panels mangle multi-line keys in several predictable ways. */
+function normalisePrivateKey(raw: string): string {
+  let key = raw.trim();
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1);
+  }
+  key = key.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+  return key.endsWith('\n') ? key : `${key}\n`;
+}
+
 function serviceAccount(): ServiceAccount | null {
-  // Preferred: the whole service-account JSON in one variable.
   const blob = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (blob) {
     try {
-      const parsed = JSON.parse(blob);
+      const parsed = JSON.parse(blob.trim());
+      if (!parsed.project_id || !parsed.client_email || !parsed.private_key) return null;
       return {
         projectId: parsed.project_id,
         clientEmail: parsed.client_email,
-        privateKey: String(parsed.private_key).replace(/\\n/g, '\n'),
+        privateKey: normalisePrivateKey(String(parsed.private_key)),
       };
     } catch {
       return null;
     }
   }
 
-  // Alternative: the three fields separately.
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (projectId && clientEmail && privateKey) {
-    return { projectId, clientEmail, privateKey: privateKey.replace(/\\n/g, '\n') };
+    return { projectId, clientEmail, privateKey: normalisePrivateKey(privateKey) };
   }
 
   return null;
+}
+
+/** Says exactly what is missing, for the server log only. */
+export function adminConfigProblem(): string | null {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT.trim());
+      const missing = ['project_id', 'client_email', 'private_key'].filter((k) => !parsed[k]);
+      return missing.length ? `FIREBASE_SERVICE_ACCOUNT is missing: ${missing.join(', ')}` : null;
+    } catch {
+      return 'FIREBASE_SERVICE_ACCOUNT is not valid JSON. Paste the whole downloaded file as one line.';
+    }
+  }
+  if (process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_PRIVATE_KEY) {
+    const missing = (
+      [
+        ['FIREBASE_PROJECT_ID', process.env.FIREBASE_PROJECT_ID],
+        ['FIREBASE_CLIENT_EMAIL', process.env.FIREBASE_CLIENT_EMAIL],
+        ['FIREBASE_PRIVATE_KEY', process.env.FIREBASE_PRIVATE_KEY],
+      ] as const
+    )
+      .filter(([, value]) => !value)
+      .map(([name]) => name);
+    return missing.length ? `Missing: ${missing.join(', ')}` : null;
+  }
+  return 'FIREBASE_SERVICE_ACCOUNT is not set.';
 }
 
 export function firebaseConfigured(): boolean {
   return Boolean(serviceAccount() && process.env.FIREBASE_STORAGE_BUCKET);
 }
 
-/** Auth only needs the service account; storage additionally needs a bucket. */
 export function firebaseAdminConfigured(): boolean {
   return Boolean(serviceAccount());
 }
@@ -58,11 +95,6 @@ export function bucket() {
   return getStorage(adminApp()).bucket(process.env.FIREBASE_STORAGE_BUCKET);
 }
 
-/**
- * Uploads a file and returns a permanently readable URL.
- * Files are made public rather than signed, so the links never expire —
- * a memorial should still work in twenty years without a token refresh.
- */
 export async function uploadToFirebase(
   file: File,
   path: string
@@ -73,17 +105,11 @@ export async function uploadToFirebase(
   await target.save(buffer, {
     contentType: file.type || 'application/octet-stream',
     resumable: false,
-    metadata: {
-      cacheControl: 'public, max-age=31536000, immutable',
-    },
+    metadata: { cacheControl: 'public, max-age=31536000, immutable' },
   });
-
   await target.makePublic();
 
-  return {
-    url: `https://storage.googleapis.com/${bucket().name}/${encodeURI(path)}`,
-    path,
-  };
+  return { url: `https://storage.googleapis.com/${bucket().name}/${encodeURI(path)}`, path };
 }
 
 export async function deleteFromFirebase(path: string): Promise<void> {

@@ -1,13 +1,12 @@
-import { Suspense } from 'react';
 import Image from 'next/image';
-import LoginForm from '@/components/admin/LoginForm';
+import ResetForm from '@/components/admin/ResetForm';
 import { getAdminBase } from '@/lib/adminPath';
 import { getProfile } from '@/lib/content';
 
-export const metadata = { title: 'Sign in', robots: { index: false, follow: false } };
+export const metadata = { title: 'Reset your password', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
 
-export default async function LoginPage() {
+export default async function ResetPage() {
   const [base, profile] = await Promise.all([getAdminBase(), getProfile()]);
 
   return (
@@ -38,16 +37,14 @@ export default async function LoginPage() {
         </div>
 
         <div className="mt-9 rounded-sm border border-mist/15 bg-mist/[0.04] p-7">
-          <Suspense fallback={<p className="font-util text-sm text-mist/50">Loading…</p>}>
-            <LoginForm adminBase={base} />
-          </Suspense>
+          <ResetForm adminBase={base} />
         </div>
 
         <a
-          href="/"
+          href={`${base}/login`}
           className="mt-6 inline-block font-util text-[0.68rem] uppercase tracking-[0.12em] text-mist/40 transition-colors hover:text-mist"
         >
-          ← Back to the memorial
+          ← Back to sign in
         </a>
       </div>
     </div>

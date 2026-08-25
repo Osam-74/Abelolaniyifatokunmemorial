@@ -1,35 +1,34 @@
 import PageHeader from '@/components/PageHeader';
-import GalleryGrid, { type Photo } from '@/components/GalleryGrid';
-import EmptyState from '@/components/EmptyState';
+import GalleryTabs from '@/components/GalleryTabs';
+import MemorialSidebar from '@/components/MemorialSidebar';
+import type { Photo } from '@/components/GalleryGrid';
+import type { VideoItem } from '@/components/VideoGrid';
 import { safeQuery } from '@/lib/content';
 
 export const revalidate = 60;
 export const metadata = { title: 'Gallery' };
 
 export default async function GalleryPage() {
-  const photos = await safeQuery<Photo>(
-    'SELECT id, url, caption, album, taken_on FROM photos ORDER BY sort_order, id'
-  );
+  const [photos, videos] = await Promise.all([
+    safeQuery<Photo>('SELECT id, url, caption, album, taken_on FROM photos ORDER BY sort_order, id'),
+    safeQuery<VideoItem>(
+      'SELECT id, title, description, url, thumbnail_url, category FROM videos ORDER BY sort_order, id'
+    ),
+  ]);
 
   return (
     <>
       <PageHeader
         eyebrow="Gallery"
-        title="Photographs of a life"
-        intro="Every photograph the family has gathered, arranged by the chapters of his life. Tap any image to view it full screen."
+        title="Photographs, film and voice"
+        intro="Everything the family has gathered. Tap any image to view it full screen."
       />
-      <section className="bg-paper py-[length:var(--spacing-section)]">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          {photos.length === 0 ? (
-            <EmptyState
-              title="No photographs have been added yet"
-              hint="The family can upload photographs and sort them into albums from the admin dashboard."
-            />
-          ) : (
-            <GalleryGrid photos={photos} />
-          )}
+      <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-[length:var(--spacing-section)] md:px-10 lg:grid-cols-[1fr_300px] lg:gap-14">
+        <div className="min-w-0">
+          <GalleryTabs photos={photos} videos={videos} />
         </div>
-      </section>
+        <MemorialSidebar />
+      </div>
     </>
   );
 }

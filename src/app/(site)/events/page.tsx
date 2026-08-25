@@ -99,7 +99,7 @@ export default async function EventsPage() {
           {events.length === 0 ? (
             <EmptyState
               title="No events have been listed yet"
-              hint="The family can add services, venues, times and livestream links from the admin dashboard."
+              hint="Details will appear here once they are confirmed."
             />
           ) : (
             <>

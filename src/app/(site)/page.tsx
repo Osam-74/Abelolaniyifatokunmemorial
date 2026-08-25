@@ -157,14 +157,16 @@ export default async function HomePage() {
       <section className="border-y border-ink/10 bg-mist/45">
         <div className="mx-auto grid max-w-[1400px] divide-y divide-ink/10 px-5 md:grid-cols-3 md:divide-x md:divide-y-0 md:px-10">
           {[
-            { label: 'Born', value: formatDate(profile.birthDate) || 'To be added', sub: profile.birthPlace },
-            { label: 'Passed away', value: formatDate(profile.deathDate) || 'To be added', sub: '' },
+            { label: 'Born', value: formatDate(profile.birthDate), sub: profile.birthPlace },
+            { label: 'Passed away', value: formatDate(profile.deathDate), sub: '' },
             {
               label: nextEvent ? 'Next gathering' : 'Remembered at',
               value: nextEvent ? formatDate(nextEvent.event_date) : 'Ilora, Oyo State',
               sub: nextEvent ? `${nextEvent.venue}${nextEvent.time_label ? ` · ${nextEvent.time_label}` : ''}` : '',
             },
-          ].map((item) => (
+          ]
+            .filter((item) => item.value)
+            .map((item) => (
             <div key={item.label} className="px-0 py-10 md:px-10">
               <p className="eyebrow text-deep">{item.label}</p>
               <p className="mt-3 font-display text-2xl leading-tight">{item.value}</p>
@@ -217,7 +219,7 @@ export default async function HomePage() {
                   </li>
                 )}
               </ol>
-              <Link href="/timeline" className="btn btn-ghost mt-9">
+              <Link href="/life#timeline" className="btn btn-ghost mt-9">
                 See the full timeline
               </Link>
             </Reveal>
@@ -375,7 +377,7 @@ export default async function HomePage() {
                 <p key={i}>{paragraph}</p>
               ))}
             </div>
-            <Link href="/life-and-legacy" className="btn btn-onink mt-9">
+            <Link href="/life" className="btn btn-onink mt-9">
               Explore his legacy
             </Link>
           </Reveal>

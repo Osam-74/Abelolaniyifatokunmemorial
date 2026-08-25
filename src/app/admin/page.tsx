@@ -35,8 +35,8 @@ export default async function AdminHome() {
     !profile.deathDate && { label: 'Add his date of passing', href: `${base}/settings#profile` },
     (counts.photos?.total ?? 0) < 3 && { label: 'Upload family photographs', href: `${base}/photos` },
     (counts.timeline?.total ?? 0) < 3 && { label: 'Build out the timeline', href: `${base}/timeline` },
-    intro.body.includes('Edit this section') && {
-      label: 'Replace the placeholder biography text',
+    !profile.birthPlace && {
+      label: 'Add his place of birth',
       href: `${base}/biography`,
     },
     (counts.videos?.total ?? 0) === 0 && { label: 'Add a tribute video', href: `${base}/videos` },
