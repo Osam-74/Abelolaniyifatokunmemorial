@@ -12,12 +12,19 @@ function createPool() {
       'DATABASE_URL is not set. Add a Postgres connection string to your environment variables.'
     );
   }
+  const disableSsl = /sslmode=disable/.test(connectionString);
+  // Strip sslmode so node-postgres stops warning about mode aliasing; TLS is
+  // configured explicitly below instead.
+  const cleaned = connectionString.replace(/([?&])sslmode=[^&]*(&|$)/, (_m, prefix, tail) =>
+    tail === '&' ? prefix : ''
+  );
+
   return new Pool({
-    connectionString,
+    connectionString: cleaned,
     max: 3,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
-    ssl: connectionString.includes('sslmode=disable') ? false : { rejectUnauthorized: false },
+    ssl: disableSsl ? false : { rejectUnauthorized: false },
   });
 }
 

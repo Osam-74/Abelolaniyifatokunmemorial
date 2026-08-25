@@ -85,12 +85,17 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
       setError(UNAVAILABLE);
       return;
     }
+    if (!email.trim() || !password) {
+      setError('Enter both your email address and password.');
+      return;
+    }
     setBusy('password');
     try {
       const auth = clientAuth();
       await setPersistence(auth, browserLocalPersistence);
       const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
       await establishSession(await credential.user.getIdToken());
+      setPassword('');
     } catch (err) {
       setError(describe(err));
       setBusy('idle');
@@ -122,7 +127,7 @@ export default function LoginForm({ adminBase }: { adminBase: string }) {
         <span className="h-px flex-1 bg-mist/20" />
       </div>
 
-      <form onSubmit={withPassword} className="space-y-4">
+      <form onSubmit={withPassword} className="space-y-4" noValidate>
         <div>
           <label htmlFor="email" className="field-label text-mist/60">
             Email address

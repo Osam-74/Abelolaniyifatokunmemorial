@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import { adminApp, firebaseAdminConfigured, adminConfigProblem } from '@/lib/firebase';
-import { createSession, destroySession, isAllowed, allowedEmails } from '@/lib/auth';
+import { mintSessionToken, isAllowed, allowedEmails, SESSION_COOKIE, cookieOptions } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,10 @@ export const dynamic = 'force-dynamic';
 /** Visitors never see the reason; it goes to the server log for whoever runs the site. */
 function refuse(status: number, publicMessage: string, logDetail: string) {
   console.error(`[sign-in] ${logDetail}`);
-  return NextResponse.json({ error: publicMessage }, { status });
+  // Set DEBUG_AUTH=1 in the environment to see the cause in the browser too.
+  const body: Record<string, unknown> = { error: publicMessage };
+  if (process.env.DEBUG_AUTH === '1') body.debug = logDetail;
+  return NextResponse.json(body, { status });
 }
 
 const UNAVAILABLE =
@@ -63,14 +66,18 @@ export async function POST(request: Request) {
       );
     }
 
-    await createSession({
+    const token = await mintSessionToken({
       uid: decoded.uid,
       email: decoded.email ?? '',
       name: decoded.name ?? decoded.email ?? '',
       picture: decoded.picture ?? '',
     });
 
-    return NextResponse.json({ ok: true });
+    // Attaching the cookie to the response is the reliable way to do this
+    // inside a Route Handler.
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(SESSION_COOKIE, token, cookieOptions);
+    return response;
   } catch (error) {
     return refuse(
       500,
@@ -81,10 +88,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  try {
-    await destroySession();
-  } catch {
-    /* clearing a cookie should never fail loudly */
-  }
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(SESSION_COOKIE, '', { ...cookieOptions, maxAge: 0 });
+  return response;
 }

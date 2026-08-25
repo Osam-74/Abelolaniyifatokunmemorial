@@ -122,8 +122,6 @@ export default async function AboutPage() {
           </p>
         </Reveal>
 
-        <TributeComposer />
-
         <section className="scroll-mt-28">
           <h2 className="text-[length:var(--text-title)]">Tributes</h2>
 
@@ -155,6 +153,8 @@ export default async function AboutPage() {
             </ul>
           )}
         </section>
+
+        <TributeComposer />
       </div>
 
       <MemorialSidebar />

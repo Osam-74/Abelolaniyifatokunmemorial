@@ -35,22 +35,35 @@ export function isAllowed(email: string | undefined | null): boolean {
   return list.includes(email.toLowerCase());
 }
 
-export async function createSession(session: Session): Promise<void> {
-  const token = await new SignJWT({ ...session, role: 'admin' })
+export const SESSION_COOKIE = COOKIE;
+
+export const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: MAX_AGE,
+};
+
+/** Builds the token. The caller decides how to attach it. */
+export async function mintSessionToken(session: Session): Promise<string> {
+  return new SignJWT({
+    email: session.email,
+    name: session.name,
+    picture: session.picture,
+    role: 'admin',
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(session.uid)
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE}s`)
     .sign(secret());
+}
 
+export async function createSession(session: Session): Promise<void> {
+  const token = await mintSessionToken(session);
   const store = await cookies();
-  store.set(COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: MAX_AGE,
-  });
+  store.set(COOKIE, token, cookieOptions);
 }
 
 export async function destroySession(): Promise<void> {
