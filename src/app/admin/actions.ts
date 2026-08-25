@@ -246,3 +246,50 @@ export async function runSetup(): Promise<ActionState> {
     };
   }
 }
+
+/* ─────────────── Batch photograph upload ─────────────── */
+
+export async function savePhotoBatch(
+  photos: { url: string; caption: string; album: string; takenOn: string }[]
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    await requireSession();
+  } catch {
+    redirect('/admin/login');
+  }
+
+  const usable = photos.filter((photo) => photo.url.trim());
+  if (usable.length === 0) return { ok: false, message: 'No photographs were ready to add.' };
+
+  try {
+    const start = await queryOne<{ next: number }>(
+      'SELECT coalesce(max(sort_order), 0) + 1 AS next FROM photos'
+    );
+    const base = start?.next ?? 1;
+
+    const values: unknown[] = [];
+    const rows = usable.map((photo, index) => {
+      values.push(photo.url.trim(), photo.caption, photo.album, photo.takenOn, base + index);
+      const o = index * 5;
+      return `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5})`;
+    });
+
+    await query(
+      `INSERT INTO photos (url, caption, album, taken_on, sort_order) VALUES ${rows.join(', ')}`,
+      values
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      message: `Could not add the photographs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+
+  revalidatePath('/');
+  revalidatePath('/gallery');
+  revalidatePath('/admin/photos');
+  return {
+    ok: true,
+    message: `${usable.length} ${usable.length === 1 ? 'photograph' : 'photographs'} added to the gallery.`,
+  };
+}

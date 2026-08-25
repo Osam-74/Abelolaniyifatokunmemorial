@@ -82,7 +82,7 @@ export default function SiteHeader({ initials, name }: { initials: string; name:
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative rounded-full px-3 py-2 font-util text-[0.72rem] uppercase tracking-[0.13em] transition-colors ${
+                  className={`underline-grow relative rounded-full px-3 py-2 font-util text-[0.72rem] uppercase tracking-[0.13em] transition-colors ${
                     overHero
                       ? 'text-mist/80 hover:text-mist'
                       : active

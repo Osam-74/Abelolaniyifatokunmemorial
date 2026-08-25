@@ -1,6 +1,7 @@
 import Flame from '@/components/Flame';
 import Reveal from '@/components/Reveal';
 import SubmissionForm from '@/components/SubmissionForm';
+import CountUp from '@/components/CountUp';
 import { lightCandle } from '@/lib/actions';
 import { safeQuery, getSetting, formatDate } from '@/lib/content';
 
@@ -34,7 +35,7 @@ export default async function CandlesPage() {
             <h1 className="mx-auto mt-5 max-w-3xl text-[length:var(--text-display)]">{intro.heading}</h1>
             <p className="mx-auto mt-6 max-w-xl leading-relaxed text-mist/70">{intro.body}</p>
             <p className="mt-10 font-display text-[clamp(2.5rem,7vw,5rem)] leading-none text-flame">
-              {total.toLocaleString('en-NG')}
+              <CountUp value={total} />
             </p>
             <p className="eyebrow mt-3 text-mist/50">
               {total === 1 ? 'candle lit' : 'candles lit'} in his memory

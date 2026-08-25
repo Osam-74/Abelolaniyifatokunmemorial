@@ -5,7 +5,7 @@ import { getSession } from '@/lib/auth';
 export const runtime = 'nodejs';
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif', 'audio/mpeg'];
-const MAX_BYTES = 12 * 1024 * 1024;
+const MAX_BYTES = 2 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Use a JPG, PNG, WebP, GIF or MP3 file.' }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: 'That file is larger than 12 MB.' }, { status: 400 });
+    return NextResponse.json({ error: 'That file is larger than 2 MB. Images are resized automatically before upload — if you are seeing this, the original was extremely large.' }, { status: 400 });
   }
 
   try {

@@ -93,7 +93,7 @@ export default function GalleryGrid({ photos }: { photos: Photo[] }) {
               setOpenIndex(index);
               setPlaying(false);
             }}
-            className="group relative block w-full break-inside-avoid overflow-hidden rounded-sm bg-mist text-left"
+            className="lift group relative block w-full break-inside-avoid overflow-hidden rounded-sm bg-mist text-left"
           >
             <Image
               src={photo.url}
@@ -102,7 +102,7 @@ export default function GalleryGrid({ photos }: { photos: Photo[] }) {
               height={1000}
               sizes="(max-width: 768px) 50vw, 33vw"
               loading="lazy"
-              className="h-auto w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              className="img-settle h-auto w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             />
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 to-transparent px-4 pb-3 pt-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
               {photo.caption && (

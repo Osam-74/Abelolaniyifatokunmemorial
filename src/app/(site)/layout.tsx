@@ -1,6 +1,8 @@
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import MusicPlayer from '@/components/MusicPlayer';
+import ScrollProgress from '@/components/ScrollProgress';
+import RouteTransition from '@/components/RouteTransition';
 import { getProfile, getSetting, lifespan } from '@/lib/content';
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -12,8 +14,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
   return (
     <>
+      <ScrollProgress />
       <SiteHeader initials={profile.initials} name={profile.shortName} />
-      <main id="main">{children}</main>
+      <main id="main">
+        <RouteTransition>{children}</RouteTransition>
+      </main>
       <SiteFooter
         name={profile.fullName}
         initials={profile.initials}

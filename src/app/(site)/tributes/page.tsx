@@ -38,7 +38,7 @@ export default async function TributesPage() {
             <div className="columns-1 gap-5 md:columns-2 lg:columns-3 [&>*]:mb-5">
               {tributes.map((tribute, i) => (
                 <Reveal key={tribute.id} delay={Math.min(i, 8) * 50}>
-                  <blockquote className="break-inside-avoid rounded-sm border border-ink/10 bg-mist/35 p-7">
+                  <blockquote className="lift break-inside-avoid rounded-sm border border-ink/10 bg-mist/35 p-7">
                     <p className="font-display text-lg italic leading-snug text-ink/85">“{tribute.message}”</p>
                     {tribute.photo_url && (
                       <Image

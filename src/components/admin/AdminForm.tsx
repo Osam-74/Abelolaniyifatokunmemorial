@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FieldDef } from '@/lib/collections';
 import type { ActionState } from '@/app/admin/actions';
+import { prepareForUpload } from '@/lib/imageResize';
 
 function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: string }) {
   const [value, setValue] = useState(defaultValue);
@@ -15,8 +16,9 @@ function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: st
     setBusy(true);
     setError('');
     try {
+      const prepared = await prepareForUpload(file);
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', prepared);
       const response = await fetch('/api/upload', { method: 'POST', body });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'The upload failed.');

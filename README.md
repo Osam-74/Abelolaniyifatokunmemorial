@@ -16,6 +16,10 @@ Media.
 **Admin dashboard** at `/admin` — edit every piece of content, upload photographs, and moderate
 everything visitors send in. Tributes, stories and guestbook entries stay hidden until approved.
 
+**Photograph uploads** — drag in a batch, give each one its own caption and date, and they all
+land in the chosen album. Anything over 2&nbsp;MB is resized in the browser before it uploads, so
+photos straight off a phone work without anyone editing them first.
+
 **Also included** — background music with a visitor-controlled on/off that remembers their choice,
 a candle wall where every flame flickers on its own timing, gallery lightbox with slideshow and
 keyboard navigation, honeypot and rate-limited forms, sitemap, robots, Open Graph tags, and full
@@ -101,7 +105,7 @@ Everything is at `/admin`:
 | Biography sections | The chapters of the About page |
 | Timeline | Milestones from birth onwards |
 | Legacy sections | The Life & Legacy page |
-| Photographs | The gallery and its albums |
+| Photographs | The gallery and its albums, with batch upload |
 | Videos | YouTube, Vimeo or uploaded video |
 | Funeral & events | Services, venues, maps, livestreams |
 | Words of wisdom | Sayings he was known for |
@@ -120,6 +124,11 @@ Anything marked "Add to homepage" appears in the featured sections on the front 
   limit stored in `submission_log`.
 - The admin session is a signed JWT in an httpOnly cookie, valid for eight hours. `src/middleware.ts`
   blocks `/admin` without it.
+- Motion is deliberately quiet: a hairline scroll indicator, the hero name rising line by line,
+  a count-up on the candle total, cards lifting on hover, and pages settling in on navigation.
+  Every one of them is switched off under `prefers-reduced-motion`.
+- Uploads are capped at 2&nbsp;MB per file. `src/lib/imageResize.ts` downscales larger images to a
+  2400px long edge and steps the JPEG quality down until they fit.
 - The colour palette lives in `src/app/globals.css` under `@theme`. Deep navy `#03045E` and ice
   `#CAF0F8` dominate; `#0077B6`, `#00B4D8` and `#90E0EF` are accents. The candle flame is the only
   warm colour on the site, and it is deliberate.

@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Reveal from '@/components/Reveal';
 import Flame from '@/components/Flame';
+import CountUp from '@/components/CountUp';
 import { getProfile, getSetting, safeQuery, lifespan, formatDate } from '@/lib/content';
 
 export const revalidate = 60;
@@ -70,9 +71,15 @@ export default async function HomePage() {
             <p className="eyebrow text-soft/80">In loving memory of</p>
 
             <h1 className="mt-5 font-display text-[length:var(--text-hero)] leading-[0.86] tracking-[-0.035em]">
-              <span className="block">Abel</span>
-              <span className="block text-soft">Olaniyi</span>
-              <span className="block">Fatokun</span>
+              <span className="stagger-line" style={{ '--stagger': '120ms' } as React.CSSProperties}>
+                <span>Abel</span>
+              </span>
+              <span className="stagger-line" style={{ '--stagger': '240ms' } as React.CSSProperties}>
+                <span className="text-soft">Olaniyi</span>
+              </span>
+              <span className="stagger-line" style={{ '--stagger': '360ms' } as React.CSSProperties}>
+                <span>Fatokun</span>
+              </span>
             </h1>
 
             {years && (
@@ -251,7 +258,7 @@ export default async function HomePage() {
                 <Reveal key={photo.id} delay={i * 60}>
                   <Link
                     href="/gallery"
-                    className="group relative block aspect-[4/5] overflow-hidden rounded-sm bg-mist"
+                    className="lift group relative block aspect-[4/5] overflow-hidden rounded-sm bg-mist"
                   >
                     <Image
                       src={photo.url}
@@ -288,7 +295,7 @@ export default async function HomePage() {
             <div className="mt-12 grid gap-5 md:grid-cols-3">
               {tributes.map((tribute, i) => (
                 <Reveal key={tribute.id} delay={i * 80}>
-                  <blockquote className="flex h-full flex-col justify-between rounded-sm border border-ink/10 bg-paper p-7">
+                  <blockquote className="lift flex h-full flex-col justify-between rounded-sm border border-ink/10 bg-paper p-7">
                     <p className="font-display text-lg italic leading-snug text-ink/85">
                       “{tribute.message.length > 190 ? `${tribute.message.slice(0, 190)}…` : tribute.message}”
                     </p>
@@ -386,7 +393,9 @@ export default async function HomePage() {
             <p className="eyebrow text-flame/70">Remembrance</p>
             <h2 className="mx-auto mt-4 max-w-2xl text-[length:var(--text-display)]">
               {total > 0
-                ? `${total.toLocaleString('en-NG')} ${total === 1 ? 'candle has' : 'candles have'} been lit in his memory`
+                ? <>
+                    <CountUp value={total} /> {total === 1 ? 'candle has' : 'candles have'} been lit in his memory
+                  </>
                 : 'Be the first to light a candle in his memory'}
             </h2>
           </Reveal>

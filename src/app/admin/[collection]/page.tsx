@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import AdminForm from '@/components/admin/AdminForm';
 import Disclosure from '@/components/admin/Disclosure';
+import BatchPhotoUpload from '@/components/admin/BatchPhotoUpload';
 import { DeleteButton, FeatureToggle, StatusButtons } from '@/components/admin/RowActions';
 import { saveRow } from '../actions';
 import { findCollection } from '@/lib/collections';
@@ -41,9 +42,24 @@ export default async function CollectionPage({
         <p className="mt-2 max-w-2xl text-ink/60">{collection.description}</p>
       </div>
 
+      {collection.slug === 'photos' && (
+        <Disclosure
+          defaultOpen
+          summary={<span className="font-display text-lg">Upload several photographs at once</span>}
+        >
+          <BatchPhotoUpload
+            albums={Array.from(
+              new Set(rows.map((row) => String(row.album ?? '')).filter(Boolean))
+            )}
+          />
+        </Disclosure>
+      )}
+
       <Disclosure
         summary={
-          <span className="font-display text-lg">Add a new {collection.singular}</span>
+          <span className="font-display text-lg">
+            {collection.slug === 'photos' ? 'Add one photograph' : `Add a new ${collection.singular}`}
+          </span>
         }
       >
         <AdminForm
