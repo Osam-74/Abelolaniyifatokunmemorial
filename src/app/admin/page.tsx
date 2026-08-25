@@ -3,6 +3,7 @@ import SetupPanel from '@/components/admin/SetupPanel';
 import { COLLECTIONS } from '@/lib/collections';
 import { getProfile, getSetting, safeQuery } from '@/lib/content';
 import { hasDatabase } from '@/lib/db';
+import { resolveAudio } from '@/lib/resolveAudio';
 import { getAdminBase } from '@/lib/adminPath';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,8 @@ export default async function AdminHome() {
 
   const base = await getAdminBase();
   const profile = await getProfile();
+  const audio = await getSetting<{ trackUrl: string; title: string }>('audio');
+  const track = resolveAudio(audio.trackUrl, audio.title);
   const intro = await getSetting<{ body: string }>('intro');
 
   const tablesReady = Object.keys(counts).length > 0;
@@ -54,6 +57,13 @@ export default async function AdminHome() {
       </div>
 
       <SetupPanel connected={connected} tablesReady={tablesReady} />
+
+      {track.warning && (
+        <div className="rounded-sm border border-flame/50 bg-flame/10 px-6 py-5">
+          <h2 className="font-display text-xl">Background music</h2>
+          <p className="mt-2 max-w-2xl text-[0.92rem] leading-relaxed text-ink/75">{track.warning}</p>
+        </div>
+      )}
 
       {pendingTotal > 0 && (
         <div className="rounded-sm border border-deep/30 bg-bright/10 px-6 py-5">

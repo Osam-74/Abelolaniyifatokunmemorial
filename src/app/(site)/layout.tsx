@@ -7,6 +7,7 @@ import ScrollProgress from '@/components/ScrollProgress';
 import RouteTransition from '@/components/RouteTransition';
 import ViewCounter from '@/components/ViewCounter';
 import { getProfile, getSetting } from '@/lib/content';
+import { resolveAudio } from '@/lib/resolveAudio';
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [profile, footer, audio] = await Promise.all([
@@ -14,6 +15,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     getSetting<{ message: string; yorubaFarewell: string }>('footer'),
     getSetting<{ enabled: boolean; trackUrl: string; title: string }>('audio'),
   ]);
+
+  const track = resolveAudio(audio.trackUrl, audio.title);
 
   return (
     <>
@@ -29,7 +32,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         message={footer.message}
         farewell={footer.yorubaFarewell}
       />
-      <MusicPlayer trackUrl={audio.trackUrl} title={audio.title} enabled={audio.enabled} />
+      <MusicPlayer trackUrl={track.url} title={track.title} enabled={audio.enabled} />
       <ViewCounter />
     </>
   );
