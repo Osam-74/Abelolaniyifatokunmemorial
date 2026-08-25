@@ -1,6 +1,5 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import PageHeader from '@/components/PageHeader';
 import Reveal from '@/components/Reveal';
 import MemorialSidebar from '@/components/MemorialSidebar';
 import { getSetting, safeQuery } from '@/lib/content';
@@ -40,16 +39,10 @@ export default async function LifePage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="His life"
-        title="The years, the work, and what remains"
-        intro={legacyIntro.body.split('\n\n')[0]}
-      />
-
       {available.length > 1 && (
         <nav
           aria-label="Sections of his life"
-          className="sticky top-[68px] z-30 border-b border-ink/10 bg-paper/92 backdrop-blur-md"
+          className="sticky top-[56px] z-30 border-b border-ink/10 bg-paper/92 backdrop-blur-md"
         >
           <div className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto px-5 py-3 md:px-10">
             {available.map((link) => (
@@ -65,7 +58,7 @@ export default async function LifePage() {
         </nav>
       )}
 
-      <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-[length:var(--spacing-section)] md:px-10 lg:grid-cols-[1fr_320px] lg:gap-16">
+      <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-10 md:px-10 md:py-14 lg:grid-cols-[1fr_300px] lg:gap-16">
         <div className="min-w-0 space-y-24">
           {milestones.length > 0 && (
             <section id="timeline" className="scroll-mt-32">

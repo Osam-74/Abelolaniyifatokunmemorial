@@ -11,6 +11,9 @@
     "secret": "node -e \"console.log('AUTH_SECRET=' + require('crypto').randomBytes(32).toString('hex'))\""
   },
   "dependencies": {
+    "@tiptap/pm": "^3.30.3",
+    "@tiptap/react": "^3.30.3",
+    "@tiptap/starter-kit": "^3.30.3",
     "@vercel/blob": "^0.27.3",
     "firebase": "^12.18.0",
     "firebase-admin": "^14.3.0",

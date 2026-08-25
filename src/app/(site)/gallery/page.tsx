@@ -1,4 +1,3 @@
-import PageHeader from '@/components/PageHeader';
 import GalleryTabs from '@/components/GalleryTabs';
 import MemorialSidebar from '@/components/MemorialSidebar';
 import type { Photo } from '@/components/GalleryGrid';
@@ -18,12 +17,7 @@ export default async function GalleryPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Gallery"
-        title="Photographs, film and voice"
-        intro="Everything the family has gathered. Tap any image to view it full screen."
-      />
-      <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-[length:var(--spacing-section)] md:px-10 lg:grid-cols-[1fr_300px] lg:gap-14">
+      <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-10 md:px-10 md:py-14 lg:grid-cols-[1fr_300px] lg:gap-14">
         <div className="min-w-0">
           <GalleryTabs photos={photos} videos={videos} />
         </div>

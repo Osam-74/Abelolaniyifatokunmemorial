@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const story = await getStory(slug);
   return story
-    ? { title: story.title, description: `${story.body.slice(0, 155)}…` }
+    ? { title: story.title, description: `${story.body.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 155)}…` }
     : { title: 'Story not found' };
 }
 
@@ -36,7 +36,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
   return (
     <article className="bg-paper">
       <header className="border-b border-ink/10 bg-mist/45">
-        <div className="mx-auto max-w-3xl px-5 pb-14 pt-32 md:px-10 md:pb-20 md:pt-40">
+        <div className="mx-auto max-w-3xl px-5 py-10 md:px-10 md:py-14">
           <Link href="/stories" className="eyebrow text-deep transition-opacity hover:opacity-70">
             ← All stories
           </Link>
@@ -67,11 +67,18 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
             <Image src={story.image_url} alt="" fill sizes="(max-width: 768px) 90vw, 720px" className="object-cover" />
           </div>
         )}
-        <div className="prose-memorial text-lg leading-[1.8] text-ink/80">
-          {story.body.split('\n\n').map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
-        </div>
+        {/[<][a-z]/i.test(story.body) ? (
+          <div
+            className="story-body text-lg leading-[1.8] text-ink/80"
+            dangerouslySetInnerHTML={{ __html: story.body }}
+          />
+        ) : (
+          <div className="prose-memorial text-lg leading-[1.8] text-ink/80">
+            {story.body.split('\n\n').map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </div>
+        )}
 
         <div className="mt-14 border-t border-ink/12 pt-8">
           <p className="eyebrow mb-4 text-ink/45">Share this story</p>
@@ -80,7 +87,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
 
         <div className="mt-12 flex flex-wrap gap-3">
           <Link href="/stories#share" className="btn btn-primary">Share your own memory</Link>
-          <Link href="/tributes" className="btn btn-ghost">Leave a tribute</Link>
+          <Link href="/about#tribute" className="btn btn-ghost">Leave a tribute</Link>
         </div>
       </div>
     </article>

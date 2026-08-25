@@ -150,3 +150,14 @@ CREATE INDEX IF NOT EXISTS idx_guestbook_status ON guestbook (status, created_at
 CREATE INDEX IF NOT EXISTS idx_stories_status ON stories (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_candles_status ON candles (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_photos_album ON photos (album, sort_order);
+
+-- Tribute kinds: a flower, a candle, or a note.
+ALTER TABLE tributes ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'note';
+CREATE INDEX IF NOT EXISTS idx_tributes_kind ON tributes (kind);
+
+-- Simple counters (page views and anything else worth tallying).
+CREATE TABLE IF NOT EXISTS site_stats (
+  key TEXT PRIMARY KEY,
+  count BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

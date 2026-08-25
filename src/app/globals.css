@@ -220,3 +220,35 @@
   .underline-grow::after { transition: none; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Rich text editor and the stories it produces */
+.prose-editor p { margin-bottom: 0.9em; }
+.prose-editor p:last-child { margin-bottom: 0; }
+.prose-editor h2 { font-family: var(--font-display); font-size: 1.4rem; margin: 1.1em 0 0.4em; }
+.prose-editor h3 { font-family: var(--font-display); font-size: 1.15rem; margin: 1em 0 0.35em; }
+.prose-editor ul, .prose-editor ol { margin: 0 0 0.9em 1.3em; }
+.prose-editor ul { list-style: disc; }
+.prose-editor ol { list-style: decimal; }
+.prose-editor li { margin-bottom: 0.3em; }
+.prose-editor blockquote {
+  border-left: 2px solid var(--color-bright);
+  padding-left: 1rem;
+  font-style: italic;
+  margin: 0 0 0.9em;
+}
+.prose-editor strong { font-weight: 600; }
+
+.story-body h2 { font-family: var(--font-display); font-size: 1.6rem; margin: 1.4em 0 0.5em; }
+.story-body h3 { font-family: var(--font-display); font-size: 1.25rem; margin: 1.2em 0 0.4em; }
+.story-body p { margin-bottom: 1.35em; }
+.story-body ul, .story-body ol { margin: 0 0 1.35em 1.4em; }
+.story-body ul { list-style: disc; }
+.story-body ol { list-style: decimal; }
+.story-body li { margin-bottom: 0.4em; }
+.story-body blockquote {
+  border-left: 2px solid var(--color-bright);
+  padding-left: 1.4rem;
+  font-style: italic;
+  margin: 0 0 1.35em;
+}
+.story-body strong { font-weight: 600; }

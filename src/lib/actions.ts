@@ -35,6 +35,20 @@ async function withinLimit(kind: string): Promise<boolean> {
   return true;
 }
 
+/** Keeps the formatting the editor produces and nothing else. */
+const ALLOWED_TAGS = /^\/?(p|br|strong|b|em|i|s|u|h2|h3|ul|ol|li|blockquote)$/i;
+
+function sanitiseHtml(input: string): string {
+  return input
+    .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<[^>]+>/g, (tag) => {
+      const name = tag.replace(/^<\s*\/?\s*/, '').split(/[\s>/]/)[0];
+      return ALLOWED_TAGS.test(name) || ALLOWED_TAGS.test(`/${name}`)
+        ? tag.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+        : '';
+    });
+}
+
 function text(form: FormData, key: string, max: number): string {
   const value = String(form.get(key) ?? '').trim();
   return value.slice(0, max);
@@ -56,25 +70,32 @@ function guard(): FormState {
   return null;
 }
 
+const KINDS = ['note', 'candle', 'flower'] as const;
+
 export async function submitTribute(_prev: FormState, form: FormData): Promise<FormState> {
   const blocked = guard();
   if (blocked) return blocked;
 
   const name = text(form, 'name', 120);
   const message = text(form, 'message', 4000);
+  const requested = text(form, 'kind', 20);
+  const kind = (KINDS as readonly string[]).includes(requested) ? requested : 'note';
+
   if (!name || !message) return { ok: false, message: 'Please add your name and a message.' };
-  if (looksLikeSpam(form, 'message')) return { ok: false, message: 'Your tribute could not be sent. Please remove any links and try again.' };
+  if (looksLikeSpam(form, 'message')) return { ok: false, message: 'Your tribute could not be posted. Please remove any links and try again.' };
   if (!(await withinLimit('tribute'))) {
-    return { ok: false, message: 'You have sent several tributes already. Please try again later today.' };
+    return { ok: false, message: 'You have left several tributes already. Please come back later today.' };
   }
 
   await query(
-    `INSERT INTO tributes (name, relationship, location, message, photo_url, status)
-     VALUES ($1, $2, $3, $4, $5, 'pending')`,
-    [name, text(form, 'relationship', 120), text(form, 'location', 120), message, text(form, 'photo_url', 600)]
+    `INSERT INTO tributes (name, relationship, location, message, photo_url, kind, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'approved')`,
+    [name, text(form, 'relationship', 120), text(form, 'location', 120), message, text(form, 'photo_url', 600), kind]
   );
+  revalidatePath('/');
+  revalidatePath('/about');
   revalidatePath('/tributes');
-  return { ok: true, message: 'Thank you. Your tribute has been sent to the family and will appear here once they have read it.' };
+  return { ok: true, message: 'Thank you. Your tribute is now on his memorial.' };
 }
 
 export async function submitGuestbook(_prev: FormState, form: FormData): Promise<FormState> {
@@ -90,11 +111,11 @@ export async function submitGuestbook(_prev: FormState, form: FormData): Promise
   }
 
   await query(
-    `INSERT INTO guestbook (name, location, message, status) VALUES ($1, $2, $3, 'pending')`,
+    `INSERT INTO guestbook (name, location, message, status) VALUES ($1, $2, $3, 'approved')`,
     [name, text(form, 'location', 120), message]
   );
   revalidatePath('/guestbook');
-  return { ok: true, message: 'Thank you for signing. Your message will appear once the family has read it.' };
+  return { ok: true, message: 'Thank you for signing his guestbook.' };
 }
 
 export async function lightCandle(_prev: FormState, form: FormData): Promise<FormState> {
@@ -123,8 +144,9 @@ export async function submitStory(_prev: FormState, form: FormData): Promise<For
 
   const title = text(form, 'title', 200);
   const author = text(form, 'author_name', 120);
-  const body = text(form, 'body', 12000);
-  if (!title || !author || !body) {
+  const body = sanitiseHtml(text(form, 'body', 40000));
+  const plain = body.replace(/<[^>]+>/g, '').trim();
+  if (!title || !author || !plain) {
     return { ok: false, message: 'Please add a title, your name, and your memory.' };
   }
   if (looksLikeSpam(form, 'body', 'title')) {
@@ -143,9 +165,10 @@ export async function submitStory(_prev: FormState, form: FormData): Promise<For
 
   await query(
     `INSERT INTO stories (slug, title, author_name, relationship, body, image_url, status)
-     VALUES ($1 || '-' || substr(md5(random()::text), 1, 5), $2, $3, $4, $5, $6, 'pending')`,
+     VALUES ($1 || '-' || substr(md5(random()::text), 1, 5), $2, $3, $4, $5, $6, 'approved')`,
     [slug, title, author, text(form, 'relationship', 120), body, text(form, 'image_url', 600)]
   );
+  revalidatePath('/');
   revalidatePath('/stories');
-  return { ok: true, message: 'Thank you. Your memory has been sent to the family and will be published once they have read it.' };
+  return { ok: true, message: 'Thank you. Your memory is now part of his story.' };
 }

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function LifeAndLegacy() {
+export default function Page() {
   redirect('/life#legacy');
 }
