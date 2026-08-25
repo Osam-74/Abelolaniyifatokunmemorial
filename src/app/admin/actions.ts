@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { query, queryOne } from '@/lib/db';
 import { checkCredentials, createSession, destroySession, requireSession } from '@/lib/auth';
 import { findCollection, SETTING_GROUPS, type Collection, type FieldDef } from '@/lib/collections';
+import { getAdminBase } from '@/lib/adminPath';
 
 export type ActionState = { ok: boolean; message: string } | null;
 
@@ -32,12 +33,13 @@ export async function signIn(_prev: ActionState, form: FormData): Promise<Action
   }
 
   await createSession(username);
-  redirect('/admin');
+  redirect(await getAdminBase());
 }
 
 export async function signOut(): Promise<void> {
+  const base = await getAdminBase();
   await destroySession();
-  redirect('/admin/login');
+  redirect(`${base}/login`);
 }
 
 /* ─────────────── Helpers ─────────────── */
@@ -76,7 +78,7 @@ function publicPathsFor(collection: Collection): string[] {
 
 function refresh(collection: Collection) {
   for (const path of publicPathsFor(collection)) revalidatePath(path);
-  revalidatePath(`/admin/${collection.slug}`);
+  revalidatePath(`/admin/${collection.slug}`, 'page');
 }
 
 /* ─────────────── Content records ─────────────── */
@@ -85,7 +87,7 @@ export async function saveRow(_prev: ActionState, form: FormData): Promise<Actio
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
 
   const slug = String(form.get('__collection') ?? '');
@@ -152,7 +154,7 @@ export async function deleteRow(slug: string, id: number): Promise<void> {
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
   const collection = findCollection(slug);
   if (!collection) return;
@@ -164,7 +166,7 @@ export async function setStatus(slug: string, id: number, status: string): Promi
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
   const collection = findCollection(slug);
   if (!collection?.moderated) return;
@@ -177,7 +179,7 @@ export async function toggleFeatured(slug: string, id: number, value: boolean): 
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
   const collection = findCollection(slug);
   if (!collection) return;
@@ -192,7 +194,7 @@ export async function saveSettings(_prev: ActionState, form: FormData): Promise<
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
 
   const key = String(form.get('__key') ?? '');
@@ -232,7 +234,7 @@ export async function runSetup(): Promise<ActionState> {
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
   try {
     const sql = await readFile(join(process.cwd(), 'src/lib/schema.sql'), 'utf8');
@@ -255,7 +257,7 @@ export async function savePhotoBatch(
   try {
     await requireSession();
   } catch {
-    redirect('/admin/login');
+    redirect(`${await getAdminBase()}/login`);
   }
 
   const usable = photos.filter((photo) => photo.url.trim());

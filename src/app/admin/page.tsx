@@ -3,6 +3,7 @@ import SetupPanel from '@/components/admin/SetupPanel';
 import { COLLECTIONS } from '@/lib/collections';
 import { getProfile, getSetting, safeQuery } from '@/lib/content';
 import { hasDatabase } from '@/lib/db';
+import { getAdminBase } from '@/lib/adminPath';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,21 +24,22 @@ export default async function AdminHome() {
     );
   }
 
+  const base = await getAdminBase();
   const profile = await getProfile();
   const intro = await getSetting<{ body: string }>('intro');
 
   const tablesReady = Object.keys(counts).length > 0;
 
   const todo = [
-    !profile.birthDate && { label: 'Add his date of birth', href: '/admin/settings#profile' },
-    !profile.deathDate && { label: 'Add his date of passing', href: '/admin/settings#profile' },
-    (counts.photos?.total ?? 0) < 3 && { label: 'Upload family photographs', href: '/admin/photos' },
-    (counts.timeline?.total ?? 0) < 3 && { label: 'Build out the timeline', href: '/admin/timeline' },
+    !profile.birthDate && { label: 'Add his date of birth', href: `${base}/settings#profile` },
+    !profile.deathDate && { label: 'Add his date of passing', href: `${base}/settings#profile` },
+    (counts.photos?.total ?? 0) < 3 && { label: 'Upload family photographs', href: `${base}/photos` },
+    (counts.timeline?.total ?? 0) < 3 && { label: 'Build out the timeline', href: `${base}/timeline` },
     intro.body.includes('Edit this section') && {
       label: 'Replace the placeholder biography text',
-      href: '/admin/biography',
+      href: `${base}/biography`,
     },
-    (counts.videos?.total ?? 0) === 0 && { label: 'Add a tribute video', href: '/admin/videos' },
+    (counts.videos?.total ?? 0) === 0 && { label: 'Add a tribute video', href: `${base}/videos` },
   ].filter(Boolean) as { label: string; href: string }[];
 
   const pendingTotal = Object.values(counts).reduce((sum, c) => sum + c.pending, 0);
@@ -62,7 +64,7 @@ export default async function AdminHome() {
             {COLLECTIONS.filter((c) => c.moderated && (counts[c.slug]?.pending ?? 0) > 0).map((c) => (
               <Link
                 key={c.slug}
-                href={`/admin/${c.slug}`}
+                href={`${base}/${c.slug}`}
                 className="rounded-full border border-deep/40 bg-paper px-4 py-1.5 font-util text-[0.7rem] uppercase tracking-[0.1em] text-deep transition-colors hover:bg-deep hover:text-mist"
               >
                 {counts[c.slug].pending} {c.label.toLowerCase()}
@@ -77,7 +79,7 @@ export default async function AdminHome() {
           {COLLECTIONS.map((collection) => (
             <Link
               key={collection.slug}
-              href={`/admin/${collection.slug}`}
+              href={`${base}/${collection.slug}`}
               className="group rounded-sm border border-ink/12 bg-paper p-5 transition-colors hover:border-ink/35"
             >
               <div className="flex items-baseline justify-between gap-3">

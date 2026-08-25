@@ -3,6 +3,7 @@ import SignOutButton from '@/components/admin/SignOutButton';
 import { getSession } from '@/lib/auth';
 import { COLLECTIONS } from '@/lib/collections';
 import { safeQuery } from '@/lib/content';
+import { getAdminBase } from '@/lib/adminPath';
 
 export const metadata = { title: 'Admin', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // The sign-in page renders on its own.
   if (!session) return <>{children}</>;
 
-  const counts = await pendingCounts();
+  const [counts, base] = await Promise.all([pendingCounts(), getAdminBase()]);
   const groups = ['Moderation', 'Content'] as const;
 
   return (
@@ -35,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="border-b border-ink/12 bg-paper">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-5 py-4 md:px-8">
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="font-display text-lg leading-none">
+            <Link href={base} className="font-display text-lg leading-none">
               Memorial admin
             </Link>
             <span className="hidden font-util text-[0.68rem] uppercase tracking-[0.12em] text-ink/40 sm:inline">
@@ -58,13 +59,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="mx-auto grid max-w-[1400px] gap-8 px-5 py-8 md:px-8 lg:grid-cols-[220px_1fr] lg:gap-12">
         <nav aria-label="Admin sections" className="lg:sticky lg:top-8 lg:self-start">
           <Link
-            href="/admin"
+            href={base}
             className="block rounded-sm px-3 py-2 font-util text-sm transition-colors hover:bg-ink/[0.06]"
           >
             Overview
           </Link>
           <Link
-            href="/admin/settings"
+            href={`${base}/settings`}
             className="block rounded-sm px-3 py-2 font-util text-sm transition-colors hover:bg-ink/[0.06]"
           >
             Website settings
@@ -79,7 +80,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 {COLLECTIONS.filter((c) => c.group === group).map((collection) => (
                   <Link
                     key={collection.slug}
-                    href={`/admin/${collection.slug}`}
+                    href={`${base}/${collection.slug}`}
                     className="flex items-center justify-between gap-2 rounded-sm px-3 py-2 font-util text-sm transition-colors hover:bg-ink/[0.06]"
                   >
                     <span>{collection.label}</span>

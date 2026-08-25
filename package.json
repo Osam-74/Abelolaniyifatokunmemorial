@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@vercel/blob": "^0.27.3",
+    "firebase-admin": "^14.3.0",
     "jose": "^5.9.6",
     "next": "15.1.6",
     "pg": "^8.13.1",

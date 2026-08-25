@@ -13,7 +13,7 @@ Built with Next.js 15 (App Router), TypeScript, Tailwind CSS v4 and Postgres. De
 pages), Tributes, Videos, Funeral & Events, Guestbook, Light a Candle, Words of Wisdom, Featured
 Media.
 
-**Admin dashboard** at `/admin` — edit every piece of content, upload photographs, and moderate
+**Admin dashboard** at whatever `ADMIN_PATH` is set to — edit every piece of content, upload photographs, and moderate
 everything visitors send in. Tributes, stories and guestbook entries stay hidden until approved.
 
 **Photograph uploads** — drag in a batch, give each one its own caption and date, and they all
@@ -47,7 +47,37 @@ npm run hash-password -- "the password you want"
 That prints both `ADMIN_PASSWORD_HASH` and `AUTH_SECRET`. Paste them in, and set `ADMIN_USERNAME`
 to whatever you like.
 
-### 3. Create the tables
+### 3. Firebase Storage
+
+Uploads go to Firebase Cloud Storage. In the Firebase console:
+
+1. **Storage → Get started.** Cloud Storage requires the Blaze plan as of February 2026, even at
+   zero usage. Staying inside Google Cloud's Always Free tier (5 GB-months of storage, 100 GB of
+   North American egress per month) costs nothing — but choose a **US region**, because Always Free
+   does not apply elsewhere.
+2. Set a **budget alert** in the Google Cloud billing console. Blaze has no hard spending cap.
+3. **Project settings → Service accounts → Generate new private key.** Paste the whole JSON file
+   into `FIREBASE_SERVICE_ACCOUNT` as one line, and set `FIREBASE_STORAGE_BUCKET`.
+
+Nothing Firebase-related reaches the browser. Uploads go through `/api/upload`, which runs on the
+server behind the admin session, using the Admin SDK. That means Firebase Storage security rules
+are not what protects your files — the session is. Keep the rules closed:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+Uploaded files are made individually public, so the image links work in a browser and never
+expire. The closed rules block the client SDK, which this site does not use.
+
+### 4. Create the tables
 
 ```bash
 npm run db:setup
@@ -59,13 +89,13 @@ than once — it never overwrites anything you have edited.
 If you would rather not run it locally, deploy first, sign in at `/admin`, and press **Create the
 tables** on the dashboard.
 
-### 4. Run it
+### 5. Run it
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:3000, and http://localhost:3000/admin to sign in.
+Open http://localhost:3000, and http://localhost:3000 + your `ADMIN_PATH` to sign in.
 
 ---
 
@@ -74,10 +104,7 @@ Open http://localhost:3000, and http://localhost:3000/admin to sign in.
 1. Import this repository at [vercel.com/new](https://vercel.com/new).
 2. Add the environment variables from `.env.example` under **Settings → Environment Variables**.
    Set `NEXT_PUBLIC_SITE_URL` to your live URL.
-3. For photograph uploads, add a **Blob** store under **Storage**. Vercel sets
-   `BLOB_READ_WRITE_TOKEN` for you. Without it the admin still works — you paste image links
-   instead of uploading files.
-4. Deploy. Every push to `main` redeploys.
+3. Deploy. Every push to `main` redeploys.
 
 ---
 
@@ -95,9 +122,20 @@ plays at low volume, and stays off for anyone who turns it off.
 
 ---
 
+## Changing the admin address
+
+Set `ADMIN_PATH` in Vercel to any single segment — `/family-office`, `/fatokun-private`, anything.
+Redeploy and the dashboard moves. While a custom path is set, `/admin` returns a 404 as though it
+were never there.
+
+`ADMIN_PATH` is a server-only variable: it is not prefixed with `NEXT_PUBLIC_`, so it is never
+compiled into the JavaScript sent to visitors. The footer no longer links to the dashboard either.
+Treat the address as one more thing worth keeping quiet, but not as the security itself — that is
+the password and the signed session.
+
 ## Editing the memorial
 
-Everything is at `/admin`:
+Everything is at your `ADMIN_PATH`:
 
 | Section | What it controls |
 | --- | --- |
@@ -122,8 +160,11 @@ Anything marked "Add to homepage" appears in the featured sections on the front 
   relevant pages straight away.
 - Forms are protected by a hidden honeypot field, a link-count check, and a per-visitor hourly
   limit stored in `submission_log`.
-- The admin session is a signed JWT in an httpOnly cookie, valid for eight hours. `src/middleware.ts`
-  blocks `/admin` without it.
+- The admin session is a signed JWT in an httpOnly cookie, valid for eight hours.
+  `src/middleware.ts` rewrites `ADMIN_PATH` onto the real `/admin` routes, blocks them without a
+  valid session, and 404s the default path when a custom one is in use.
+- Uploads go to Firebase Cloud Storage via the Admin SDK, with Vercel Blob kept as an automatic
+  fallback if the Firebase variables are ever absent.
 - Motion is deliberately quiet: a hairline scroll indicator, the hero name rising line by line,
   a count-up on the candle total, cards lifting on hover, and pages settling in on navigation.
   Every one of them is switched off under `prefers-reduced-motion`.

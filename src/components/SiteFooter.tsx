@@ -118,9 +118,7 @@ export default function SiteFooter({
           <p>
             © {new Date().getFullYear()} The family of {name}
           </p>
-          <Link href="/admin" className="transition-colors hover:text-mist/80">
-            Family sign-in
-          </Link>
+          <p>Sùn re o</p>
         </div>
       </div>
     </footer>
