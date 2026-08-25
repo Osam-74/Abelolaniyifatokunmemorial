@@ -5,42 +5,11 @@ import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { query, queryOne } from '@/lib/db';
-import { checkCredentials, createSession, destroySession, requireSession } from '@/lib/auth';
+import { requireSession } from '@/lib/auth';
 import { findCollection, SETTING_GROUPS, type Collection, type FieldDef } from '@/lib/collections';
 import { getAdminBase } from '@/lib/adminPath';
 
 export type ActionState = { ok: boolean; message: string } | null;
-
-/* ─────────────── Authentication ─────────────── */
-
-export async function signIn(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const username = String(form.get('username') ?? '').trim();
-  const password = String(form.get('password') ?? '');
-
-  if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD_HASH) {
-    return {
-      ok: false,
-      message: 'No administrator account is configured. Set ADMIN_USERNAME and ADMIN_PASSWORD_HASH in your environment variables.',
-    };
-  }
-  if (!username || !password) return { ok: false, message: 'Enter your username and password.' };
-
-  // Slows down guessing without needing external infrastructure.
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
-  if (!checkCredentials(username, password)) {
-    return { ok: false, message: 'That username and password do not match.' };
-  }
-
-  await createSession(username);
-  redirect(await getAdminBase());
-}
-
-export async function signOut(): Promise<void> {
-  const base = await getAdminBase();
-  await destroySession();
-  redirect(`${base}/login`);
-}
 
 /* ─────────────── Helpers ─────────────── */
 

@@ -1,9 +1,13 @@
+import { Suspense } from 'react';
 import LoginForm from '@/components/admin/LoginForm';
+import { getAdminBase } from '@/lib/adminPath';
 
 export const metadata = { title: 'Sign in', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const base = await getAdminBase();
+
   return (
     <div className="grid min-h-screen place-items-center bg-ink px-5 py-16">
       <div className="w-full max-w-sm">
@@ -13,7 +17,9 @@ export default function LoginPage() {
           This area is private. It is where the memorial's content, tributes and guestbook are managed.
         </p>
         <div className="mt-9 rounded-sm border border-mist/15 bg-mist/[0.04] p-7">
-          <LoginForm />
+          <Suspense fallback={<p className="font-util text-sm text-mist/50">Loading…</p>}>
+            <LoginForm adminBase={base} />
+          </Suspense>
         </div>
         <a
           href="/"

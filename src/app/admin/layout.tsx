@@ -28,6 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // The sign-in page renders on its own.
   if (!session) return <>{children}</>;
 
+
   const [counts, base] = await Promise.all([pendingCounts(), getAdminBase()]);
   const groups = ['Moderation', 'Content'] as const;
 
@@ -40,7 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               Memorial admin
             </Link>
             <span className="hidden font-util text-[0.68rem] uppercase tracking-[0.12em] text-ink/40 sm:inline">
-              {session.username}
+              {session.email}
             </span>
           </div>
           <div className="flex items-center gap-5">
@@ -51,7 +52,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               View the website ↗
             </Link>
-            <SignOutButton />
+            <SignOutButton loginHref={`${base}/login`} />
           </div>
         </div>
       </header>

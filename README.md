@@ -34,20 +34,33 @@ keyboard navigation, honeypot and rate-limited forms, sitemap, robots, Open Grap
 Any Postgres works — [Neon](https://neon.tech) and [Supabase](https://supabase.com) both have free
 tiers, or use Vercel's own Postgres. Copy the connection string.
 
-### 2. Environment variables
+### 2. Sign-in
 
-Copy `.env.example` to `.env.local` and fill it in. To generate the admin password hash and the
-auth secret:
+Administrators sign in with Firebase Authentication — Google, or email and password. There is no
+password stored in this codebase and no sign-up form anywhere on the site.
+
+In the Firebase console:
+
+1. **Authentication → Sign-in method** → enable **Google** and **Email/Password**.
+2. **Authentication → Settings → User actions** → untick **Enable create (sign-up)**. This stops
+   anyone creating an account, including with a Google account.
+3. **Authentication → Users → Add user** to create each administrator by hand.
+4. Add every one of those addresses to `ADMIN_EMAILS`.
+
+Both steps matter. Firebase proves *who* someone is; `ADMIN_EMAILS` decides whether that person may
+manage the memorial. If the sign-up switch is ever turned back on, the allowlist still holds.
+Removing an address revokes access on the next request, not in eight hours.
+
+### 3. Environment variables
+
+Copy `.env.example` to `.env.local` and fill it in. Generate the cookie secret with:
 
 ```bash
 npm install
-npm run hash-password -- "the password you want"
+npm run secret
 ```
 
-That prints both `ADMIN_PASSWORD_HASH` and `AUTH_SECRET`. Paste them in, and set `ADMIN_USERNAME`
-to whatever you like.
-
-### 3. Firebase Storage
+### 4. Firebase Storage
 
 Uploads go to Firebase Cloud Storage. In the Firebase console:
 
@@ -77,7 +90,7 @@ service firebase.storage {
 Uploaded files are made individually public, so the image links work in a browser and never
 expire. The closed rules block the client SDK, which this site does not use.
 
-### 4. Create the tables
+### 5. Create the tables
 
 ```bash
 npm run db:setup
@@ -89,7 +102,7 @@ than once — it never overwrites anything you have edited.
 If you would rather not run it locally, deploy first, sign in at `/admin`, and press **Create the
 tables** on the dashboard.
 
-### 5. Run it
+### 6. Run it
 
 ```bash
 npm run dev
@@ -154,13 +167,24 @@ Anything marked "Add to homepage" appears in the featured sections on the front 
 
 ---
 
+## A note on the sign-in UI
+
+There is no maintained drop-in Firebase auth UI. `react-firebaseui` has had no release since
+November 2021, `firebaseui-react` is explicitly unmaintained by its author, and `firebaseui-web`
+has open Next.js App Router bugs. So the sign-in *logic* is entirely Firebase's SDK — no
+hand-rolled password handling — while the form itself is built in this site's own design language.
+
 ## Notes for whoever maintains this
 
 - Content changes appear on the website within about a minute. Approving a tribute refreshes the
   relevant pages straight away.
 - Forms are protected by a hidden honeypot field, a link-count check, and a per-visitor hourly
   limit stored in `submission_log`.
-- The admin session is a signed JWT in an httpOnly cookie, valid for eight hours.
+- Sign-in is Firebase Authentication. The browser gets an ID token, `/api/auth/session` verifies it
+  with the Admin SDK, checks it against `ADMIN_EMAILS`, and issues a short signed JWT in an
+  httpOnly cookie — that last step exists so the Edge middleware can check sessions without the
+  Admin SDK, which does not run on Edge.
+- The session cookie is valid for eight hours.
   `src/middleware.ts` rewrites `ADMIN_PATH` onto the real `/admin` routes, blocks them without a
   valid session, and 404s the default path when a custom one is in use.
 - Uploads go to Firebase Cloud Storage via the Admin SDK, with Vercel Blob kept as an automatic

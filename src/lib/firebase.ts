@@ -39,7 +39,12 @@ export function firebaseConfigured(): boolean {
   return Boolean(serviceAccount() && process.env.FIREBASE_STORAGE_BUCKET);
 }
 
-function app() {
+/** Auth only needs the service account; storage additionally needs a bucket. */
+export function firebaseAdminConfigured(): boolean {
+  return Boolean(serviceAccount());
+}
+
+export function adminApp() {
   if (getApps().length) return getApp();
   const credential = serviceAccount();
   if (!credential) throw new Error('Firebase service account credentials are missing.');
@@ -50,7 +55,7 @@ function app() {
 }
 
 export function bucket() {
-  return getStorage(app()).bucket(process.env.FIREBASE_STORAGE_BUCKET);
+  return getStorage(adminApp()).bucket(process.env.FIREBASE_STORAGE_BUCKET);
 }
 
 /**
