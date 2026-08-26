@@ -166,3 +166,6 @@ CREATE TABLE IF NOT EXISTS site_stats (
 ALTER TABLE photos ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved';
 ALTER TABLE photos ADD COLUMN IF NOT EXISTS submitted_by TEXT DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_photos_status ON photos (status, sort_order);
+
+-- Anything that predates the status column belongs in the gallery already.
+UPDATE photos SET status = 'approved' WHERE status IS NULL OR status = '';

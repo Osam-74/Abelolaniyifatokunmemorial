@@ -8,3 +8,4 @@ out
 next-env.d.ts
 .DS_Store
 src/lib/audioManifest.ts
+src/lib/schemaSql.ts

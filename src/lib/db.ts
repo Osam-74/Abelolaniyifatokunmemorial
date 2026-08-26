@@ -1,8 +1,11 @@
 import { Pool, type QueryResultRow } from 'pg';
+import { SCHEMA_SQL } from './schemaSql';
 
 declare global {
   // eslint-disable-next-line no-var
   var __memorialPool: Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __memorialSchemaRun: Promise<void> | undefined;
 }
 
 function createPool() {
@@ -33,12 +36,49 @@ export function getPool(): Pool {
   return global.__memorialPool;
 }
 
+/**
+ * Applies the schema. Everything in it is CREATE IF NOT EXISTS or ADD COLUMN
+ * IF NOT EXISTS, so this is safe to run repeatedly and never touches content.
+ */
+export async function ensureSchema(): Promise<void> {
+  if (!global.__memorialSchemaRun) {
+    global.__memorialSchemaRun = getPool()
+      .query(SCHEMA_SQL)
+      .then(() => undefined)
+      .catch((error) => {
+        // Let the next request try again rather than caching a failure.
+        global.__memorialSchemaRun = undefined;
+        throw error;
+      });
+  }
+  return global.__memorialSchemaRun;
+}
+
+function isMissingStructure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /column .* does not exist|relation .* does not exist|undefined column|undefined table/i.test(
+    message
+  );
+}
+
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = []
 ): Promise<T[]> {
-  const result = await getPool().query<T>(text, params);
-  return result.rows;
+  try {
+    const result = await getPool().query<T>(text, params);
+    return result.rows;
+  } catch (error) {
+    if (!isMissingStructure(error)) throw error;
+
+    // A deploy has added a table or column that this database does not have
+    // yet. Apply the schema and try once more, so the site heals itself
+    // instead of quietly returning nothing.
+    console.warn('[db] Missing structure detected; applying schema and retrying.');
+    await ensureSchema();
+    const result = await getPool().query<T>(text, params);
+    return result.rows;
+  }
 }
 
 export async function queryOne<T extends QueryResultRow = QueryResultRow>(

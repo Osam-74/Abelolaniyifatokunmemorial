@@ -2,6 +2,7 @@ import Link from 'next/link';
 import ShareRow from './ShareRow';
 import TributeIcon from './TributeIcon';
 import FadingGallery from './FadingGallery';
+import ContributePhotoButton from './ContributePhotoButton';
 import { safeQuery, getSetting, formatDate } from '@/lib/content';
 
 type Photo = { id: number; url: string; caption: string; album: string };
@@ -87,9 +88,7 @@ export default async function MemorialSidebar() {
           <Link href="/gallery" className="btn btn-ghost mt-4 w-full">
             Open the gallery
           </Link>
-          <Link href="/gallery/share" className="btn btn-primary mt-2 w-full">
-            Share a photograph
-          </Link>
+          <ContributePhotoButton />
         </div>
       )}
 

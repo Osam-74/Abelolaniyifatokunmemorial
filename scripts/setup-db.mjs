@@ -163,9 +163,9 @@ async function main() {
   const { rows: photoCount } = await client.query('SELECT count(*)::int AS n FROM photos');
   if (photoCount[0].n === 0) {
     await client.query(
-      `INSERT INTO photos (album, url, caption, featured, sort_order) VALUES
-        ('Later years', '/images/portrait.jpg', 'Abel Olaniyi Fatokun', true, 1),
-        ('A Life Remembered', '/images/burial-flier.jpg', 'Announcement of the final burial ceremony and thanksgiving service', false, 2)`
+      `INSERT INTO photos (album, url, caption, featured, sort_order, status) VALUES
+        ('Later years', '/images/portrait.jpg', 'Abel Olaniyi Fatokun', true, 1, 'approved'),
+        ('A Life Remembered', '/images/burial-flier.jpg', 'Announcement of the final burial ceremony and thanksgiving service', false, 2, 'approved')`
     );
     console.log('Photos seeded.');
   }

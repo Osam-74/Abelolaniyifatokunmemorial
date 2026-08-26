@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { savePhotoCaptions, deleteRow } from '@/app/admin/actions';
+import { savePhotoCaptions, deleteRow, setStatus } from '@/app/admin/actions';
 
 export type PhotoRow = {
   id: number;
@@ -231,7 +231,47 @@ export default function PhotoCaptionEditor({ photos }: { photos: PhotoRow[] }) {
               </div>
             </div>
 
-            <div className="mt-7 flex flex-wrap items-center gap-4">
+            {open.status !== 'approved' && (
+              <div className="mt-5 rounded-sm border border-flame/50 bg-flame/10 px-4 py-3">
+                <p className="font-util text-[0.8rem] text-ink/75">
+                  This photograph is waiting for you. It is not on the website yet.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {(['approved', 'pending', 'rejected'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={saving || open.status === value}
+                  onClick={() =>
+                    startSaving(async () => {
+                      await setStatus('photos', open.id, value);
+                      patch(open.id, { status: value });
+                      setResult({
+                        ok: true,
+                        message:
+                          value === 'approved'
+                            ? 'Published to the gallery.'
+                            : value === 'rejected'
+                              ? 'Rejected.'
+                              : 'Held back.',
+                      });
+                    })
+                  }
+                  className={`rounded-full border px-3.5 py-1.5 font-util text-[0.66rem] uppercase tracking-[0.1em] transition-colors ${
+                    open.status === value
+                      ? 'border-deep bg-deep text-mist'
+                      : 'border-ink/20 text-ink/60 hover:border-ink hover:text-ink'
+                  }`}
+                >
+                  {value === 'approved' ? 'Published' : value === 'pending' ? 'Hold' : 'Reject'}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-4">
               <button
                 type="button"
                 onClick={() => saveOne(open)}

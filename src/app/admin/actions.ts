@@ -1,10 +1,8 @@
 'use server';
 
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { query, queryOne } from '@/lib/db';
+import { query, queryOne, ensureSchema } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { findCollection, SETTING_GROUPS, type Collection, type FieldDef } from '@/lib/collections';
 import { getAdminBase } from '@/lib/adminPath';
@@ -246,8 +244,7 @@ export async function runSetup(): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect(`${await getAdminBase()}/login`);
   try {
-    const sql = await readFile(join(process.cwd(), 'src/lib/schema.sql'), 'utf8');
-    await query(sql);
+    await ensureSchema();
     revalidatePath('/', 'layout');
     return { ok: true, message: 'Database tables are ready.' };
   } catch (error) {
