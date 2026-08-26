@@ -91,15 +91,67 @@ export function adminApp() {
   });
 }
 
-export function bucket() {
-  return getStorage(adminApp()).bucket(process.env.FIREBASE_STORAGE_BUCKET);
+/**
+ * Firebase reports two different names for the same store and it is easy to
+ * set the wrong one. Projects created before October 2024 use
+ * <project>.appspot.com; newer ones use <project>.firebasestorage.app. The
+ * console shows the download domain, which is not always the bucket name.
+ */
+function bucketCandidates(): string[] {
+  const configured = (process.env.FIREBASE_STORAGE_BUCKET ?? '').trim().replace(/^gs:\/\//, '');
+  const names: string[] = [];
+  if (configured) names.push(configured);
+
+  const base = configured.replace(/\.(appspot\.com|firebasestorage\.app)$/, '');
+  if (base && base !== configured) {
+    for (const suffix of ['firebasestorage.app', 'appspot.com']) {
+      const alternate = `${base}.${suffix}`;
+      if (!names.includes(alternate)) names.push(alternate);
+    }
+  }
+
+  const project = serviceAccount()?.projectId;
+  if (project) {
+    for (const suffix of ['firebasestorage.app', 'appspot.com']) {
+      const guess = `${project}.${suffix}`;
+      if (!names.includes(guess)) names.push(guess);
+    }
+  }
+  return names;
+}
+
+export function bucket(name?: string) {
+  return getStorage(adminApp()).bucket(name ?? bucketCandidates()[0]);
+}
+
+/** Returns the first candidate that actually exists. */
+export async function resolveBucketName(): Promise<{ name: string | null; tried: string[] }> {
+  const tried = bucketCandidates();
+  for (const name of tried) {
+    try {
+      const [exists] = await getStorage(adminApp()).bucket(name).exists();
+      if (exists) return { name, tried };
+    } catch {
+      /* try the next candidate */
+    }
+  }
+  return { name: null, tried };
 }
 
 export async function uploadToFirebase(
   file: File,
   path: string
 ): Promise<{ url: string; path: string }> {
-  const target = bucket().file(path);
+  const { name, tried } = await resolveBucketName();
+  if (!name) {
+    throw new Error(
+      `No Firebase Storage bucket could be found. Tried: ${tried.join(', ') || '(nothing configured)'}. ` +
+        'Open the Firebase console, go to Storage, and check the bucket has been created — ' +
+        'then copy its exact name into FIREBASE_STORAGE_BUCKET.'
+    );
+  }
+
+  const target = bucket(name).file(path);
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await target.save(buffer, {
@@ -109,7 +161,7 @@ export async function uploadToFirebase(
   });
   await target.makePublic();
 
-  return { url: `https://storage.googleapis.com/${bucket().name}/${encodeURI(path)}`, path };
+  return { url: `https://storage.googleapis.com/${name}/${encodeURI(path)}`, path };
 }
 
 export async function deleteFromFirebase(path: string): Promise<void> {

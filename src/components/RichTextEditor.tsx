@@ -14,18 +14,31 @@ const BUTTONS = [
   { id: 'blockquote', label: '❝', title: 'Quote', className: '' },
 ] as const;
 
+/** Older records were stored as plain text with blank lines between paragraphs. */
+function toHtml(value: string): string {
+  const text = (value ?? '').trim();
+  if (!text) return '';
+  if (/<[a-z][\s\S]*>/i.test(text)) return text;
+  return text
+    .split(/\n{2,}/)
+    .map((block) => `<p>${block.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
 export default function RichTextEditor({
   name,
-  placeholder = 'Write your memory…',
+  placeholder = 'Write here…',
+  initialValue = '',
 }: {
   name: string;
   placeholder?: string;
+  initialValue?: string;
 }) {
-  const [html, setHtml] = useState('');
+  const [html, setHtml] = useState(() => toHtml(initialValue));
 
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [2, 3] } })],
-    content: '',
+    content: toHtml(initialValue),
     immediatelyRender: false,
     editorProps: {
       attributes: {

@@ -13,18 +13,18 @@ export default async function MemorialHero() {
   const years = lifespan(profile);
 
   return (
-    <section className="relative isolate w-full overflow-hidden sm:h-[52svh] sm:min-h-[400px]">
+    <section className="relative isolate w-full overflow-hidden sm:h-[56svh] sm:min-h-[430px]">
       <Image src="/images/hero-sky.jpg" alt="" fill priority sizes="100vw" className="object-cover" />
       <div className="absolute inset-0 bg-paper/55 sm:bg-gradient-to-r sm:from-paper/85 sm:via-paper/40 sm:to-paper/5" />
 
       <div className="relative mx-auto flex h-full max-w-[1400px] flex-col items-center gap-5 px-5 py-9 text-center sm:flex-row sm:items-center sm:gap-8 sm:py-8 sm:text-left md:px-10">
-        <div className="relative h-52 w-[10.5rem] shrink-0 overflow-hidden rounded-sm border-4 border-paper shadow-[0_10px_40px_-12px_rgba(3,4,94,0.45)] sm:order-2 sm:h-[calc(100%-3.5rem)] sm:w-[clamp(150px,20vw,260px)] sm:self-center">
+        <div className="relative h-[17rem] w-[13.5rem] shrink-0 overflow-hidden rounded-sm border-4 border-paper shadow-[0_10px_40px_-12px_rgba(3,4,94,0.45)] sm:order-2 sm:h-[calc(100%-2.5rem)] sm:w-[clamp(180px,23vw,300px)] sm:self-center">
           <Image
             src={profile.portraitUrl || '/images/portrait.jpg'}
             alt={`Portrait of ${profile.fullName}`}
             fill
             priority
-            sizes="(max-width: 640px) 168px, 260px"
+            sizes="(max-width: 640px) 216px, 300px"
             className="object-cover object-top"
           />
         </div>
@@ -43,7 +43,7 @@ export default async function MemorialHero() {
           )}
 
           {years && (
-            <p className="mt-2.5 font-util text-[0.64rem] uppercase tracking-[0.24em] text-deep sm:text-[0.72rem] sm:tracking-[0.26em]">
+            <p className="mt-3 font-display text-[clamp(1.15rem,2.6vw,1.7rem)] tracking-[0.06em] text-deep">
               {years}
             </p>
           )}

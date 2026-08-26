@@ -1,7 +1,7 @@
 import Image from 'next/image';
-import PageHeader from '@/components/PageHeader';
+import RichText from '@/components/RichText';
+import MemorialSidebar from '@/components/MemorialSidebar';
 import Reveal from '@/components/Reveal';
-import EmptyState from '@/components/EmptyState';
 import { safeQuery, formatDate } from '@/lib/content';
 
 export const revalidate = 60;
@@ -41,11 +41,7 @@ export default async function EventsPage() {
           {event.address && <p className="mt-1 text-[0.95rem] text-ink/60">{event.address}</p>}
 
           {event.description && (
-            <div className="prose-memorial mt-6 leading-relaxed text-ink/70">
-              {event.description.split('\n\n').map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
-            </div>
+            <RichText value={event.description} className="mt-6 leading-relaxed text-ink/70" />
           )}
 
           <div className="mt-7 flex flex-wrap gap-3">
@@ -88,59 +84,42 @@ export default async function EventsPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Funeral & Events"
-        title="Where the family gathers"
-        intro="Service details, venues and directions. Once a gathering has passed, it stays here as part of the record."
-      />
-
-      <section className="bg-paper py-[length:var(--spacing-section)]">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+      <div className="mx-auto grid max-w-[1400px] gap-10 px-5 py-10 md:px-10 md:py-14 lg:grid-cols-[1fr_300px] lg:gap-12">
+        <div className="min-w-0">
+          <h1 className="text-[length:var(--text-title)]">
+            Where family, friends and loved ones gather
+          </h1>
+          <div className="mt-8">
           {events.length === 0 ? (
-            <EmptyState
-              title="No events have been listed yet"
-              hint="Details will appear here once they are confirmed."
-            />
+            <p className="text-ink/60">Details will appear here once they are confirmed.</p>
           ) : (
             <>
-              {upcoming.length > 0 && (
-                <>
-                  <p className="eyebrow text-deep">Upcoming</p>
-                  <div className="mt-6">{upcoming.map((e) => renderEvent(e, false))}</div>
-                </>
-              )}
+              {upcoming.length > 0 && <div>{upcoming.map((e) => renderEvent(e, false))}</div>}
               {past.length > 0 && (
                 <>
-                  <p className="eyebrow mt-20 text-ink/40">Already held</p>
-                  <div className="mt-6">{past.map((e) => renderEvent(e, true))}</div>
+                  <p className="eyebrow mt-16 text-ink/40">Already held</p>
+                  <div className="mt-4">{past.map((e) => renderEvent(e, true))}</div>
                 </>
               )}
             </>
           )}
-        </div>
-      </section>
+          </div>
 
-      <section className="border-t border-ink/10 bg-mist/40 py-16">
-        <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-5 md:px-10 lg:grid-cols-[1fr_1.4fr]">
-          <div className="relative aspect-[3/2] overflow-hidden rounded-sm border border-ink/10 bg-paper">
-            <Image
-              src="/images/burial-flier.jpg"
-              alt="Announcement of the final burial ceremony and thanksgiving service"
-              fill
-              sizes="(max-width: 1024px) 90vw, 460px"
-              className="object-contain"
-            />
-          </div>
-          <div>
-            <p className="eyebrow text-deep">The announcement</p>
-            <h2 className="mt-3 text-[length:var(--text-title)]">The family's invitation</h2>
-            <p className="mt-4 max-w-lg leading-relaxed text-ink/65">
-              The original announcement of the final burial ceremony and thanksgiving service,
-              kept here as part of the record.
-            </p>
+          <div className="mt-14 border-t border-ink/12 pt-10">
+            <div className="relative aspect-[3/2] max-w-2xl overflow-hidden rounded-sm border border-ink/10 bg-paper">
+              <Image
+                src="/images/burial-flier.jpg"
+                alt="Announcement of the final burial ceremony and thanksgiving service"
+                fill
+                sizes="(max-width: 1024px) 90vw, 640px"
+                className="object-contain"
+              />
+            </div>
           </div>
         </div>
-      </section>
+
+        <MemorialSidebar />
+      </div>
     </>
   );
 }

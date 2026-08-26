@@ -3,6 +3,7 @@ import Reveal from '@/components/Reveal';
 import MemorialSidebar from '@/components/MemorialSidebar';
 import TributeComposer from '@/components/TributeComposer';
 import TributeIcon from '@/components/TributeIcon';
+import RichText from '@/components/RichText';
 import { getProfile, getSetting, safeQuery, formatDate } from '@/lib/content';
 
 export const revalidate = 30;
@@ -62,11 +63,11 @@ export default async function AboutPage() {
               </p>
             )}
 
-            <div className="prose-memorial leading-relaxed text-ink/80">
-              {intro.body.split('\n\n').map((paragraph, i) => (
-                <p key={i}>{paragraph}</p>
-              ))}
-            </div>
+            {intro.heading && (
+              <h1 className="text-[length:var(--text-title)] leading-tight">{intro.heading}</h1>
+            )}
+
+            <RichText value={intro.body} className="leading-relaxed text-ink/80" />
           </div>
         </Reveal>
 

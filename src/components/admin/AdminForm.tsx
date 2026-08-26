@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FieldDef } from '@/lib/collections';
 import type { ActionState } from '@/app/admin/actions';
 import { prepareForUpload } from '@/lib/imageResize';
+import RichTextEditor from '@/components/RichTextEditor';
 
 function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: string }) {
   const [value, setValue] = useState(defaultValue);
@@ -94,15 +95,50 @@ function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: st
   );
 }
 
+/** <input type="date"> only accepts YYYY-MM-DD. */
+function toDateInputValue(value: unknown): string {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    // Use the local calendar date, not UTC, so a date never shifts a day back.
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${value.getFullYear()}-${month}-${day}`;
+  }
+  const text = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(text)) return text.slice(0, 10);
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${parsed.getFullYear()}-${month}-${day}`;
+}
+
 function Field({ field, value }: { field: FieldDef; value: unknown }) {
   const stringValue =
     value === null || value === undefined
       ? ''
-      : Array.isArray(value)
-        ? value.join(', ')
-        : String(value);
+      : value instanceof Date
+        ? toDateInputValue(value)
+        : Array.isArray(value)
+          ? value.join(', ')
+          : String(value);
 
   if (field.type === 'image') return <ImageField field={field} defaultValue={stringValue} />;
+
+  if (field.type === 'richtext') {
+    return (
+      <div>
+        <label className="field-label">
+          {field.label}
+          {field.required && <span className="ml-1 text-deep">*</span>}
+        </label>
+        <RichTextEditor name={field.name} initialValue={stringValue} />
+        {field.help && <p className="mt-1.5 font-util text-[0.72rem] text-ink/45">{field.help}</p>}
+      </div>
+    );
+  }
 
   if (field.type === 'boolean') {
     return (
@@ -147,7 +183,7 @@ function Field({ field, value }: { field: FieldDef; value: unknown }) {
           id={field.name}
           name={field.name}
           type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
-          defaultValue={field.type === 'date' ? stringValue.slice(0, 10) : stringValue}
+          defaultValue={field.type === 'date' ? toDateInputValue(value) : stringValue}
           placeholder={field.placeholder}
           className="field"
         />
@@ -185,7 +221,9 @@ export default function AdminForm({
   const [state, formAction] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement | null>(null);
 
-  if (onDoneReset && state?.ok) formRef.current?.reset();
+  useEffect(() => {
+    if (onDoneReset && state?.ok) formRef.current?.reset();
+  }, [onDoneReset, state]);
 
   return (
     <form ref={formRef} action={formAction} className="space-y-5">

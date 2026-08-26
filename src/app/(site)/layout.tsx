@@ -23,7 +23,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <ScrollProgress />
       <SiteHeader name={profile.fullName} portrait={profile.portraitUrl || '/images/portrait.jpg'} />
       <MemorialHero />
-      <TabNav />
+      <TabNav name={profile.fullName} portrait={profile.portraitUrl || '/images/portrait.jpg'} />
       <main id="main">
         <RouteTransition>{children}</RouteTransition>
       </main>

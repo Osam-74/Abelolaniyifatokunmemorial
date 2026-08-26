@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminConfigProblem } from '@/lib/firebase';
+import { adminConfigProblem, resolveBucketName } from '@/lib/firebase';
 import { firebaseProjectId } from '@/lib/verifyFirebaseToken';
 
 export const runtime = 'nodejs';
@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
  * Visit /api/health to find out what is missing without reading server logs.
  */
 export async function GET() {
+  const storage = await resolveBucketName().catch(() => ({ name: null, tried: [] as string[] }));
   const secret = process.env.AUTH_SECRET ?? '';
   const emails = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean);
 
@@ -28,7 +29,9 @@ export async function GET() {
     firebaseStorage: {
       ok: adminConfigProblem() === null,
       problem: adminConfigProblem(),
-      storageBucket: Boolean(process.env.FIREBASE_STORAGE_BUCKET),
+      configuredBucket: process.env.FIREBASE_STORAGE_BUCKET ?? null,
+      bucketFound: storage.name,
+      bucketsTried: storage.tried,
     },
     firebaseBrowser: {
       // These are inlined at BUILD time. If any read false after you set them

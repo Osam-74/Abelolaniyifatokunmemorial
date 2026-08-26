@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import Reveal from '@/components/Reveal';
+import RichText from '@/components/RichText';
 import MemorialSidebar from '@/components/MemorialSidebar';
 import { getSetting, safeQuery } from '@/lib/content';
 
@@ -79,13 +80,7 @@ export default async function LifePage() {
                       </span>
                       <p className="font-util text-sm tracking-[0.12em] text-deep">{m.year}</p>
                       <h3 className="mt-1 font-display text-2xl leading-snug">{m.title}</h3>
-                      {m.body && (
-                        <div className="prose-memorial mt-3 leading-relaxed text-ink/70">
-                          {m.body.split('\n\n').map((p, j) => (
-                            <p key={j}>{p}</p>
-                          ))}
-                        </div>
-                      )}
+                      {m.body && <RichText value={m.body} className="mt-3 leading-relaxed text-ink/70" />}
                       {m.image_url && (
                         <div className="relative mt-5 aspect-[16/10] max-w-xl overflow-hidden rounded-sm bg-mist">
                           <Image
@@ -126,11 +121,7 @@ export default async function LifePage() {
                           />
                         </div>
                       )}
-                      <div className="prose-memorial mt-5 leading-relaxed text-ink/70">
-                        {section.body.split('\n\n').map((p, j) => (
-                          <p key={j}>{p}</p>
-                        ))}
-                      </div>
+                      <RichText value={section.body} className="mt-5 leading-relaxed text-ink/70" />
                     </article>
                   </Reveal>
                 ))}

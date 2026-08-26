@@ -7,6 +7,7 @@ export type FieldType =
   | 'number'
   | 'date'
   | 'boolean'
+  | 'richtext'
   | 'select';
 
 export type FieldDef = {
@@ -71,7 +72,7 @@ export const COLLECTIONS: Collection[] = [
     titleField: 'heading',
     fields: [
       { name: 'heading', label: 'Heading', type: 'text', required: true },
-      { name: 'body', label: 'Text', type: 'longtext', required: true, help: 'Leave a blank line between paragraphs.' },
+      { name: 'body', label: 'Text', type: 'richtext', required: true },
       { name: 'pull_quote', label: 'Pull quote', type: 'textarea' },
       { name: 'image_url', label: 'Photograph', type: 'image' },
       SORT,
@@ -91,7 +92,7 @@ export const COLLECTIONS: Collection[] = [
       { name: 'year', label: 'Year or date', type: 'text', required: true, half: true, placeholder: '1955' },
       SORT,
       { name: 'title', label: 'What happened', type: 'text', required: true },
-      { name: 'body', label: 'Description', type: 'longtext' },
+      { name: 'body', label: 'Description', type: 'richtext' },
       { name: 'image_url', label: 'Photograph', type: 'image' },
     ],
   },
@@ -106,7 +107,7 @@ export const COLLECTIONS: Collection[] = [
     titleField: 'heading',
     fields: [
       { name: 'heading', label: 'Heading', type: 'text', required: true },
-      { name: 'body', label: 'Text', type: 'longtext', required: true },
+      { name: 'body', label: 'Text', type: 'richtext', required: true },
       { name: 'image_url', label: 'Photograph', type: 'image' },
       SORT,
     ],
@@ -167,7 +168,7 @@ export const COLLECTIONS: Collection[] = [
       { name: 'address', label: 'Address', type: 'text' },
       { name: 'map_query', label: 'What to search for on the map', type: 'text', help: 'Leave empty to use the venue and address.' },
       { name: 'livestream_url', label: 'Livestream or recording link', type: 'url' },
-      { name: 'description', label: 'Details', type: 'longtext' },
+      { name: 'description', label: 'Details', type: 'richtext' },
       SORT,
     ],
   },
