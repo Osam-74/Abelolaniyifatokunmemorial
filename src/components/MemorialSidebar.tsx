@@ -2,23 +2,35 @@ import Link from 'next/link';
 import ShareRow from './ShareRow';
 import TributeIcon from './TributeIcon';
 import FadingGallery from './FadingGallery';
-import { safeQuery, formatDate } from '@/lib/content';
+import { safeQuery, getSetting, formatDate } from '@/lib/content';
 
 type Photo = { id: number; url: string; caption: string };
-type EventRow = { id: number; title: string; event_date: string | null; time_label: string; venue: string };
+type EventRow = {
+  id: number; title: string; event_date: string | null;
+  time_label: string; venue: string; upcoming: boolean;
+};
 
 export default async function MemorialSidebar() {
-  const [photos, photoCount, counts, views, nextEvent] = await Promise.all([
+  const [photos, photoCount, counts, views, nextEvent, contact] = await Promise.all([
     safeQuery<Photo>('SELECT id, url, caption FROM photos ORDER BY featured DESC, sort_order, id LIMIT 12'),
     safeQuery<{ n: number }>('SELECT count(*)::int AS n FROM photos'),
     safeQuery<{ kind: string; n: number }>(
       `SELECT kind, count(*)::int AS n FROM tributes WHERE status = 'approved' GROUP BY kind`
     ),
     safeQuery<{ count: string }>("SELECT count FROM site_stats WHERE key = 'views'"),
+    // Prefer the next gathering; if none is dated ahead, fall back to the most
+    // recent one so the box never simply vanishes.
     safeQuery<EventRow>(
-      `SELECT id, title, event_date, time_label, venue FROM events
-       WHERE event_date >= current_date ORDER BY event_date LIMIT 1`
+      `SELECT id, title, event_date, time_label, venue,
+              (event_date IS NOT NULL AND event_date >= current_date) AS upcoming
+       FROM events
+       ORDER BY (event_date IS NOT NULL AND event_date >= current_date) DESC,
+                CASE WHEN event_date >= current_date THEN event_date END ASC NULLS LAST,
+                event_date DESC NULLS LAST,
+                sort_order
+       LIMIT 1`
     ),
+    getSetting<{ contactEmail: string; phones: string[] }>('footer'),
   ]);
 
   const tally = (kind: string) => counts.find((row) => row.kind === kind)?.n ?? 0;
@@ -56,7 +68,7 @@ export default async function MemorialSidebar() {
 
       {event && (
         <div className="rounded-sm border border-deep/25 bg-mist/60 p-5">
-          <p className="eyebrow text-deep">Next gathering</p>
+          <p className="eyebrow text-deep">{event.upcoming ? 'Next gathering' : 'Most recent gathering'}</p>
           <p className="mt-3 font-display text-lg leading-snug">{event.title}</p>
           <p className="mt-2 text-[0.9rem] text-ink/65">
             {formatDate(event.event_date)}
@@ -93,6 +105,48 @@ export default async function MemorialSidebar() {
         </span>
         <span className="font-util text-[0.72rem] uppercase tracking-[0.1em] text-ink/50">Views</span>
       </div>
+
+      {(contact.phones?.length > 0 || contact.contactEmail) && (
+        <div className="rounded-sm border border-ink/12 bg-paper p-5">
+          <p className="eyebrow text-deep">Contact the family</p>
+          <p className="mt-2.5 text-[0.88rem] leading-relaxed text-ink/60">
+            His children welcome your call or message.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            {(contact.phones ?? []).map((phone) => (
+              <a
+                key={phone}
+                href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+                className="flex items-center gap-3 rounded-sm border border-ink/12 px-3.5 py-2.5 font-util text-[0.86rem] transition-colors hover:border-deep hover:bg-mist/50"
+              >
+                <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none">
+                  <path
+                    d="M3 1.5h2.2l1.1 3-1.5 1.1a9.5 9.5 0 0 0 4.6 4.6l1.1-1.5 3 1.1V12a2 2 0 0 1-2.2 2A12.5 12.5 0 0 1 1 3.7 2 2 0 0 1 3 1.5z"
+                    stroke="#0077B6"
+                    strokeWidth="1.3"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {phone}
+              </a>
+            ))}
+
+            {contact.contactEmail && (
+              <a
+                href={`mailto:${contact.contactEmail}`}
+                className="flex items-center gap-3 rounded-sm border border-ink/12 px-3.5 py-2.5 font-util text-[0.86rem] transition-colors hover:border-deep hover:bg-mist/50"
+              >
+                <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none">
+                  <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="#0077B6" strokeWidth="1.3" />
+                  <path d="M1.5 4 8 8.5 14.5 4" stroke="#0077B6" strokeWidth="1.3" />
+                </svg>
+                <span className="truncate">{contact.contactEmail}</span>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-sm border border-ink/12 bg-paper p-5">
         <p className="eyebrow text-deep">Share this memorial</p>

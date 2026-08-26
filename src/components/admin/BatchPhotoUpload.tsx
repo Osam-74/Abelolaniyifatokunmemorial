@@ -27,6 +27,42 @@ export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
   const update = (key: string, patch: Partial<Item>) =>
     setItems((current) => current.map((item) => (item.key === key ? { ...item, ...patch } : item)));
 
+  /** Kept so a failed upload can be tried again without re-picking the file. */
+  const [files, setFiles] = useState<Record<string, File>>({});
+
+  const uploadOne = async (key: string, file: File) => {
+    try {
+      const prepared = await prepareForUpload(file);
+      update(key, { state: 'uploading', finalSize: prepared.size, error: undefined });
+
+      const body = new FormData();
+      body.append('file', prepared);
+      const response = await fetch('/api/upload', { method: 'POST', body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'The upload failed.');
+
+      update(key, { state: 'ready', url: data.url });
+    } catch (error) {
+      update(key, {
+        state: 'failed',
+        error: error instanceof Error ? error.message : 'The upload failed.',
+      });
+    }
+  };
+
+  const retry = (key: string) => {
+    const file = files[key];
+    if (!file) return;
+    update(key, { state: 'preparing', error: undefined });
+    void uploadOne(key, file);
+  };
+
+  const retryAll = () => {
+    for (const item of items) {
+      if (item.state === 'failed') retry(item.key);
+    }
+  };
+
   const addFiles = async (files: FileList) => {
     setResult(null);
     const incoming = Array.from(files).slice(0, 40);
@@ -44,28 +80,18 @@ export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
     }));
 
     setItems((current) => [...current, ...staged]);
+    setFiles((current) => {
+      const next = { ...current };
+      staged.forEach((item, i) => {
+        next[item.key] = incoming[i];
+      });
+      return next;
+    });
 
-    // Uploaded one at a time so a family member on a slow connection sees steady progress
+    // One at a time, so someone on a slow connection sees steady progress
     // rather than everything stalling at once.
     for (let i = 0; i < incoming.length; i += 1) {
-      const item = staged[i];
-      try {
-        const prepared = await prepareForUpload(incoming[i]);
-        update(item.key, { state: 'uploading', finalSize: prepared.size });
-
-        const body = new FormData();
-        body.append('file', prepared);
-        const response = await fetch('/api/upload', { method: 'POST', body });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? 'The upload failed.');
-
-        update(item.key, { state: 'ready', url: data.url });
-      } catch (error) {
-        update(item.key, {
-          state: 'failed',
-          error: error instanceof Error ? error.message : 'The upload failed.',
-        });
-      }
+      await uploadOne(staged[i].key, incoming[i]);
     }
   };
 
@@ -185,7 +211,16 @@ export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
                     </div>
 
                     {item.state === 'failed' ? (
-                      <p className="text-[0.82rem] text-[#b00020]">{item.error}</p>
+                      <div className="space-y-2">
+                        <p className="text-[0.82rem] leading-relaxed text-[#b00020]">{item.error}</p>
+                        <button
+                          type="button"
+                          onClick={() => retry(item.key)}
+                          className="rounded-full border border-ink/25 px-3.5 py-1.5 font-util text-[0.68rem] uppercase tracking-[0.1em] transition-colors hover:bg-ink hover:text-mist"
+                        >
+                          Try again
+                        </button>
+                      </div>
                     ) : (
                       <div className="grid gap-2 sm:grid-cols-[1fr_10rem]">
                         <input
@@ -229,9 +264,17 @@ export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
                   ? 'Waiting for uploads…'
                   : `Add ${ready.length} ${ready.length === 1 ? 'photograph' : 'photographs'}`}
             </button>
+            {items.some((item) => item.state === 'failed') && (
+              <button type="button" onClick={retryAll} className="btn btn-ghost">
+                Retry {items.filter((item) => item.state === 'failed').length} failed
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setItems([])}
+              onClick={() => {
+                setItems([]);
+                setFiles({});
+              }}
               className="font-util text-[0.7rem] uppercase tracking-[0.11em] text-ink/45 hover:text-ink"
             >
               Clear

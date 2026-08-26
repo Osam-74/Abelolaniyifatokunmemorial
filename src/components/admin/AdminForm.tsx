@@ -11,19 +11,22 @@ function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: st
   const [value, setValue] = useState(defaultValue);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const upload = async (file: File) => {
     setBusy(true);
     setError('');
+    setLastFile(file);
     try {
       const prepared = await prepareForUpload(file);
       const body = new FormData();
       body.append('file', prepared);
       const response = await fetch('/api/upload', { method: 'POST', body });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? 'The upload failed.');
       setValue(data.url);
+      setLastFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The upload failed.');
     } finally {
@@ -87,7 +90,21 @@ function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: st
               event.target.value = '';
             }}
           />
-          {error && <p className="text-[0.8rem] text-deep">{error}</p>}
+          {error && (
+            <div className="space-y-1.5">
+              <p className="text-[0.8rem] leading-relaxed text-[#b00020]">{error}</p>
+              {lastFile && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => upload(lastFile)}
+                  className="rounded-full border border-ink/25 px-3 py-1 font-util text-[0.66rem] uppercase tracking-[0.1em] transition-colors hover:bg-ink hover:text-mist disabled:opacity-50"
+                >
+                  {busy ? 'Retrying…' : 'Try again'}
+                </button>
+              )}
+            </div>
+          )}
           {field.help && <p className="font-util text-[0.72rem] text-ink/45">{field.help}</p>}
         </div>
       </div>

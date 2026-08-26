@@ -81,8 +81,12 @@ function publicPathsFor(collection: Collection): string[] {
   return map[collection.slug] ?? ['/'];
 }
 
+/** Collections that appear in the sidebar, which is on every public page. */
+const SIDEBAR_COLLECTIONS = new Set(['events', 'photos', 'tributes']);
+
 function refresh(collection: Collection) {
   for (const path of publicPathsFor(collection)) revalidatePath(path);
+  if (SIDEBAR_COLLECTIONS.has(collection.slug)) revalidatePath('/', 'layout');
   revalidatePath(`/admin/${collection.slug}`, 'page');
 }
 
@@ -296,5 +300,36 @@ export async function savePhotoBatch(
   return {
     ok: true,
     message: `${usable.length} ${usable.length === 1 ? 'photograph' : 'photographs'} added to the gallery.`,
+  };
+}
+
+/* ─────────────── Quick caption editing ─────────────── */
+
+export async function savePhotoCaptions(
+  updates: { id: number; caption: string; album: string; takenOn: string }[]
+): Promise<{ ok: boolean; message: string }> {
+  const session = await getSession();
+  if (!session) redirect(`${await getAdminBase()}/login`);
+
+  if (updates.length === 0) return { ok: false, message: 'Nothing to save.' };
+
+  try {
+    for (const item of updates) {
+      await query(
+        'UPDATE photos SET caption = $1, album = $2, taken_on = $3 WHERE id = $4',
+        [item.caption.trim(), item.album.trim() || 'A Life Remembered', item.takenOn.trim(), item.id]
+      );
+    }
+  } catch (error) {
+    const outcome = explain(error, 'saving captions');
+    return { ok: false, message: outcome?.message ?? 'Could not save.' };
+  }
+
+  revalidatePath('/', 'layout');
+  revalidatePath('/gallery');
+  revalidatePath('/admin/photos');
+  return {
+    ok: true,
+    message: `${updates.length} ${updates.length === 1 ? 'photograph' : 'photographs'} updated.`,
   };
 }

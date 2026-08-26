@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import AdminForm from '@/components/admin/AdminForm';
 import Disclosure from '@/components/admin/Disclosure';
 import BatchPhotoUpload from '@/components/admin/BatchPhotoUpload';
+import PhotoCaptionEditor, { type PhotoRow } from '@/components/admin/PhotoCaptionEditor';
 import { DeleteButton, FeatureToggle, StatusButtons } from '@/components/admin/RowActions';
 import { saveRow } from '../actions';
 import { findCollection } from '@/lib/collections';
@@ -52,6 +53,14 @@ export default async function CollectionPage({
               new Set(rows.map((row) => String(row.album ?? '')).filter(Boolean))
             )}
           />
+        </Disclosure>
+      )}
+
+      {collection.slug === 'photos' && rows.length > 0 && (
+        <Disclosure
+          summary={<span className="font-display text-lg">Captions and albums</span>}
+        >
+          <PhotoCaptionEditor photos={rows as unknown as PhotoRow[]} />
         </Disclosure>
       )}
 
