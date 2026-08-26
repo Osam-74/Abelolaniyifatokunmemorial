@@ -4,16 +4,17 @@ import TributeIcon from './TributeIcon';
 import FadingGallery from './FadingGallery';
 import { safeQuery, getSetting, formatDate } from '@/lib/content';
 
-type Photo = { id: number; url: string; caption: string };
+type Photo = { id: number; url: string; caption: string; album: string };
 type EventRow = {
   id: number; title: string; event_date: string | null;
   time_label: string; venue: string; upcoming: boolean;
 };
 
 export default async function MemorialSidebar() {
-  const [photos, photoCount, counts, views, nextEvent, contact] = await Promise.all([
-    safeQuery<Photo>('SELECT id, url, caption FROM photos ORDER BY featured DESC, sort_order, id LIMIT 12'),
-    safeQuery<{ n: number }>('SELECT count(*)::int AS n FROM photos'),
+  const [photos, counts, views, nextEvent, contact] = await Promise.all([
+    safeQuery<Photo>(
+      "SELECT id, url, caption, album FROM photos WHERE status = 'approved' ORDER BY featured DESC, sort_order, id LIMIT 12"
+    ),
     safeQuery<{ kind: string; n: number }>(
       `SELECT kind, count(*)::int AS n FROM tributes WHERE status = 'approved' GROUP BY kind`
     ),
@@ -40,7 +41,6 @@ export default async function MemorialSidebar() {
     { kind: 'note', label: 'Notes left', value: tally('note') },
   ];
 
-  const totalPhotos = photoCount[0]?.n ?? 0;
   const viewCount = Number(views[0]?.count ?? 0);
   const event = nextEvent[0];
 
@@ -83,14 +83,12 @@ export default async function MemorialSidebar() {
 
       {photos.length > 0 && (
         <div className="rounded-sm border border-ink/12 bg-mist/45 p-5">
-          <p className="eyebrow text-deep">
-            {totalPhotos} {totalPhotos === 1 ? 'photograph' : 'photographs'}
-          </p>
-          <div className="mt-4">
-            <FadingGallery photos={photos} />
-          </div>
+          <FadingGallery photos={photos} />
           <Link href="/gallery" className="btn btn-ghost mt-4 w-full">
             Open the gallery
+          </Link>
+          <Link href="/gallery/share" className="btn btn-primary mt-2 w-full">
+            Share a photograph
           </Link>
         </div>
       )}

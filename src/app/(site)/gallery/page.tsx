@@ -9,7 +9,9 @@ export const metadata = { title: 'Gallery' };
 
 export default async function GalleryPage() {
   const [photos, videos] = await Promise.all([
-    safeQuery<Photo>('SELECT id, url, caption, album, taken_on FROM photos ORDER BY sort_order, id'),
+    safeQuery<Photo>(
+      "SELECT id, url, caption, album, taken_on FROM photos WHERE status = 'approved' ORDER BY sort_order, id"
+    ),
     safeQuery<VideoItem>(
       'SELECT id, title, description, url, thumbnail_url, category FROM videos ORDER BY sort_order, id'
     ),

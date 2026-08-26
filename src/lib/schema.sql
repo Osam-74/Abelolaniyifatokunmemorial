@@ -161,3 +161,8 @@ CREATE TABLE IF NOT EXISTS site_stats (
   count BIGINT NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Photographs sent in by visitors wait for approval; everything already here stays visible.
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved';
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS submitted_by TEXT DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_photos_status ON photos (status, sort_order);

@@ -14,24 +14,22 @@ export default function GalleryTabs({ photos, videos }: { photos: Photo[]; video
     { id: 'photo', label: 'Photo', count: photos.length },
     { id: 'video', label: 'Video', count: film.length },
     { id: 'audio', label: 'Audio', count: audio.length },
-  ].filter((tab) => tab.count > 0);
+  ];
 
-  const [active, setActive] = useState(tabs[0]?.id ?? 'photo');
+  const [active, setActive] = useState(photos.length ? 'photo' : film.length ? 'video' : 'photo');
 
-  if (tabs.length === 0) {
-    return (
-      <div className="rounded-sm border border-dashed border-ink/20 bg-mist/30 px-6 py-16 text-center">
-        <p className="font-display text-xl text-ink/80">Nothing has been added yet</p>
-        <p className="mx-auto mt-2 max-w-md text-[0.95rem] text-ink/55">
-          The family is still gathering his photographs and recordings.
-        </p>
-      </div>
-    );
-  }
+  const empty = (what: string) => (
+    <div className="rounded-sm border border-dashed border-ink/20 bg-mist/30 px-6 py-16 text-center">
+      <p className="font-display text-xl text-ink/80">No {what} yet</p>
+      <p className="mx-auto mt-2 max-w-md text-[0.95rem] text-ink/55">
+        The family is still gathering them.
+      </p>
+    </div>
+  );
 
   return (
     <>
-      {tabs.length > 1 && (
+      {
         <div className="flex border-b border-ink/12" role="tablist" aria-label="Media type">
           {tabs.map((tab) => (
             <button
@@ -50,12 +48,13 @@ export default function GalleryTabs({ photos, videos }: { photos: Photo[]; video
             </button>
           ))}
         </div>
-      )}
+      }
 
       <div className="mt-10">
-        {active === 'photo' && <GalleryGrid photos={photos} />}
-        {active === 'video' && <VideoGrid videos={film} />}
-        {active === 'audio' && (
+        {active === 'photo' && (photos.length ? <GalleryGrid photos={photos} /> : empty('photographs'))}
+        {active === 'video' && (film.length ? <VideoGrid videos={film} /> : empty('videos'))}
+        {active === 'audio' && audio.length === 0 && empty('recordings')}
+        {active === 'audio' && audio.length > 0 && (
           <ul className="space-y-3">
             {audio.map((track) => (
               <li key={track.id} className="rounded-sm border border-ink/12 bg-mist/35 p-6">

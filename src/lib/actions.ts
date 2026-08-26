@@ -172,3 +172,30 @@ export async function submitStory(_prev: FormState, form: FormData): Promise<For
   revalidatePath('/stories');
   return { ok: true, message: 'Thank you. Your memory is now part of his story.' };
 }
+
+export async function submitPhotograph(_prev: FormState, form: FormData): Promise<FormState> {
+  const blocked = guard();
+  if (blocked) return blocked;
+
+  const url = text(form, 'url', 800);
+  const name = text(form, 'name', 120);
+  const caption = text(form, 'caption', 400);
+
+  if (!url) return { ok: false, message: 'Please choose a photograph first.' };
+  if (!name) return { ok: false, message: 'Please add your name.' };
+  if (looksLikeSpam(form, 'caption')) {
+    return { ok: false, message: 'That could not be sent. Please remove any links and try again.' };
+  }
+
+  await query(
+    `INSERT INTO photos (url, caption, album, submitted_by, status, sort_order)
+     VALUES ($1, $2, $3, $4, 'pending', (SELECT coalesce(max(sort_order), 0) + 1 FROM photos))`,
+    [url, caption, 'Shared by family & friends', name]
+  );
+
+  revalidatePath('/gallery');
+  return {
+    ok: true,
+    message: 'Thank you. Your photograph has been sent to the family and will appear here once they have seen it.',
+  };
+}

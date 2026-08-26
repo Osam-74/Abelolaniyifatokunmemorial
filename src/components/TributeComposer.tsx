@@ -9,7 +9,7 @@ function PublishButton() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="btn btn-primary">
-      {pending ? 'Publishing…' : 'Publish'}
+      {pending ? 'Sending…' : 'Submit'}
     </button>
   );
 }

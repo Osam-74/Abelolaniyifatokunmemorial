@@ -57,11 +57,9 @@ export default async function CollectionPage({
       )}
 
       {collection.slug === 'photos' && rows.length > 0 && (
-        <Disclosure
-          summary={<span className="font-display text-lg">Captions and albums</span>}
-        >
+        <div className="rounded-sm border border-ink/12 bg-white p-5">
           <PhotoCaptionEditor photos={rows as unknown as PhotoRow[]} />
-        </Disclosure>
+        </div>
       )}
 
       <Disclosure
@@ -80,7 +78,7 @@ export default async function CollectionPage({
         />
       </Disclosure>
 
-      {rows.length === 0 ? (
+      {collection.slug === 'photos' ? null : rows.length === 0 ? (
         <div className="rounded-sm border border-dashed border-ink/20 bg-paper px-6 py-12 text-center">
           <p className="font-display text-lg text-ink/75">
             No {collection.label.toLowerCase()} yet
