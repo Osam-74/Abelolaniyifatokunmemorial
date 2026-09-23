@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 
 type Props = { trackUrl: string; title: string; enabled: boolean };
 
+const VOLUME = 0.4;
+
 export default function MusicPlayer({ trackUrl, title, enabled }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -12,25 +14,35 @@ export default function MusicPlayer({ trackUrl, title, enabled }: Props) {
 
   useEffect(() => setMounted(true), []);
 
-  // Browsers block autoplay, so the track starts on the visitor's first
-  // gesture, and only if they have not previously switched it off.
+  // The visitor asked for this to always play on load, so we try play()
+  // the moment the page mounts, on every visit — no "previously turned it
+  // off" memory that would silently skip it later. Browsers still block
+  // audible autoplay without any prior interaction on that tab, so if the
+  // direct attempt is rejected we fall back to starting on the visitor's
+  // very first tap/click/keypress instead of waiting for them to find the
+  // button — in practice that's still effectively instant.
   useEffect(() => {
     if (!enabled || !mounted || !trackUrl) return;
-    if (localStorage.getItem('memorial-music') === 'off') return;
 
-    const start = () => {
-      const audio = audioRef.current;
-      if (!audio) return;
-      audio.volume = 0.22;
-      audio.play().then(() => setPlaying(true)).catch(() => undefined);
-    };
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    window.addEventListener('pointerdown', start, { once: true });
-    window.addEventListener('keydown', start, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', start);
-      window.removeEventListener('keydown', start);
-    };
+    audio.volume = VOLUME;
+    audio
+      .play()
+      .then(() => setPlaying(true))
+      .catch(() => {
+        const start = () => {
+          audio.volume = VOLUME;
+          audio.play().then(() => setPlaying(true)).catch(() => undefined);
+        };
+        window.addEventListener('pointerdown', start, { once: true });
+        window.addEventListener('keydown', start, { once: true });
+        return () => {
+          window.removeEventListener('pointerdown', start);
+          window.removeEventListener('keydown', start);
+        };
+      });
   }, [enabled, mounted, trackUrl]);
 
   if (!enabled || !trackUrl) return null;
@@ -40,13 +52,11 @@ export default function MusicPlayer({ trackUrl, title, enabled }: Props) {
     if (!audio) return;
     if (audio.paused) {
       setFailed(false);
-      audio.volume = 0.22;
+      audio.volume = VOLUME;
       audio.play().then(() => setPlaying(true)).catch(() => setFailed(true));
-      localStorage.setItem('memorial-music', 'on');
     } else {
       audio.pause();
       setPlaying(false);
-      localStorage.setItem('memorial-music', 'off');
     }
   };
 
@@ -56,7 +66,7 @@ export default function MusicPlayer({ trackUrl, title, enabled }: Props) {
         ref={audioRef}
         src={trackUrl}
         loop
-        preload="metadata"
+        preload="auto"
         onError={() => {
           console.error(`[music] Could not load ${trackUrl}. Check the file exists and is real audio.`);
           setFailed(true);
