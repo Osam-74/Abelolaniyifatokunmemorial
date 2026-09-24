@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import SignOutButton from '@/components/admin/SignOutButton';
+import AdminNav from '@/components/admin/AdminNav';
 import { getSession } from '@/lib/auth';
 import { COLLECTIONS } from '@/lib/collections';
 import { safeQuery } from '@/lib/content';
@@ -58,10 +59,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
 
       <div className="mx-auto grid max-w-[1400px] gap-8 px-5 py-8 md:px-8 lg:grid-cols-[220px_1fr] lg:gap-12">
-        <nav
-          aria-label="Admin sections"
-          className="rounded-sm bg-ink p-3 text-mist lg:sticky lg:top-8 lg:self-start"
-        >
+        <AdminNav>
           <Link
             href={base}
             className="block rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
@@ -98,7 +96,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </div>
             </div>
           ))}
-        </nav>
+        </AdminNav>
 
         <div className="min-w-0">{children}</div>
       </div>
