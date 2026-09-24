@@ -13,10 +13,22 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Funeral & Events' };
 
 type EventRow = {
-  id: number; title: string; event_date: string | null; time_label: string;
+  // Postgres `date` columns come back from `pg` as native Date objects, not
+  // strings — the type here reflects that reality.
+  id: number; title: string; event_date: string | Date | null; time_label: string;
   venue: string; address: string; map_query: string; livestream_url: string; description: string;
   flyer_url: string;
 };
+
+/** Normalizes a DB date value (Date object or string) to 'YYYY-MM-DD' for safe
+ * string comparison. Comparing a Date object to a string with >= / < silently
+ * coerces to NaN (always false) instead of throwing — that bug was the reason
+ * every event silently vanished from both the "upcoming" and "past" lists. */
+function toDateKey(value: string | Date | null): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
 
 export default async function EventsPage() {
   // Belt-and-suspenders: make sure the schema (including newer columns like
@@ -30,8 +42,14 @@ export default async function EventsPage() {
   );
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = events.filter((e) => !e.event_date || e.event_date >= today);
-  const past = events.filter((e) => e.event_date && e.event_date < today);
+  const upcoming = events.filter((e) => {
+    const d = toDateKey(e.event_date);
+    return !d || d >= today;
+  });
+  const past = events.filter((e) => {
+    const d = toDateKey(e.event_date);
+    return !!d && d < today;
+  });
 
   const renderEvent = (event: EventRow, isPast: boolean) => (
     <Reveal key={event.id}>
