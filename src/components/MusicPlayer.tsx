@@ -45,6 +45,32 @@ export default function MusicPlayer({ trackUrl, title, enabled }: Props) {
       });
   }, [enabled, mounted, trackUrl]);
 
+  // Leaving the page — switching tabs, minimizing, backgrounding the app on
+  // mobile — should stop the music immediately, even for a moment. It comes
+  // back on its own when the visitor returns, but only if it was actually
+  // playing (a manual pause via the button stays paused).
+  const autoPausedRef = useRef(false);
+  useEffect(() => {
+    if (!enabled) return;
+
+    const onVisibilityChange = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (document.hidden) {
+        if (!audio.paused) {
+          audio.pause();
+          autoPausedRef.current = true;
+        }
+      } else if (autoPausedRef.current) {
+        autoPausedRef.current = false;
+        audio.play().catch(() => undefined);
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [enabled]);
+
   if (!enabled || !trackUrl) return null;
 
   const toggle = () => {

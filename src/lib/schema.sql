@@ -169,3 +169,7 @@ CREATE INDEX IF NOT EXISTS idx_photos_status ON photos (status, sort_order);
 
 -- Anything that predates the status column belongs in the gallery already.
 UPDATE photos SET status = 'approved' WHERE status IS NULL OR status = '';
+
+-- Each event can carry its own flyer/poster, uploaded from the admin and
+-- shown first (above the details) on the Funeral & Events page.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS flyer_url TEXT DEFAULT '';

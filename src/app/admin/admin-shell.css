@@ -1,0 +1,62 @@
+/*
+ * Mirrors EduCBT's PortalShell layout 1:1 in structure and interaction
+ * (fixed sidebar, grouped icon nav with an active accent bar, a topbar with
+ * a hamburger that opens a native <dialog> drawer on mobile), restyled with
+ * this site's own palette (ink/deep/bright/mist/paper) instead of copying
+ * EduCBT's forest-green branding.
+ */
+.admin-shell { --as-ink: var(--color-ink); --as-mist: var(--color-mist); background: #eef7fb; min-height: 100dvh; color: var(--color-ink); }
+.admin-shell a:focus-visible, .admin-shell button:focus-visible { outline: 3px solid var(--color-bright); outline-offset: 3px; }
+
+.as-sidebar { position: fixed; inset: 0 auto 0 0; width: 264px; display: flex; flex-direction: column; background: var(--as-ink); color: var(--as-mist); z-index: 30; }
+.as-brand { display: flex; align-items: center; gap: 12px; padding: 22px 24px 16px; }
+.as-brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid color-mix(in srgb, var(--as-mist) 30%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--color-deep) 55%, var(--as-ink)); flex-shrink: 0; }
+.as-brand strong { display: block; font-size: 20px; letter-spacing: -0.6px; color: #fff; }
+.as-brand span { display: block; font-size: 11px; color: color-mix(in srgb, var(--as-mist) 65%, transparent); letter-spacing: 0.08em; text-transform: uppercase; }
+.as-account { padding: 0 24px 20px; border-bottom: 1px solid color-mix(in srgb, var(--as-mist) 18%, transparent); }
+.as-account strong { display: block; color: #fff; font-size: 14.5px; font-weight: 700; margin-bottom: 4px; }
+.as-account span { display: block; color: color-mix(in srgb, var(--as-mist) 78%, transparent); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.as-scroll { flex: 1; overflow-y: auto; padding: 8px 14px 20px; }
+.as-label { text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.1em; font-weight: 700; color: color-mix(in srgb, var(--as-mist) 55%, transparent); margin: 18px 12px 8px; }
+.as-scroll a { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 11px 13px; text-decoration: none; color: color-mix(in srgb, var(--as-mist) 88%, transparent); border-radius: 9px; font-size: 14.5px; font-weight: 500; margin: 3px 0; }
+.as-scroll a > span:first-child { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.as-scroll svg { flex-shrink: 0; color: color-mix(in srgb, var(--as-mist) 65%, transparent); width: 18px; height: 18px; }
+.as-scroll a:hover { background: color-mix(in srgb, var(--color-deep) 35%, var(--as-ink)); }
+.as-scroll a[aria-current="page"] { background: color-mix(in srgb, var(--color-deep) 55%, var(--as-ink)); color: #fff; font-weight: 650; }
+.as-scroll a[aria-current="page"]::after { content: ''; position: absolute; right: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--color-bright); }
+.as-badge { flex-shrink: 0; border-radius: 999px; background: var(--color-bright); color: var(--as-ink); font-size: 11px; font-weight: 700; padding: 1px 7px; line-height: 1.5; }
+.as-footer { padding: 17px 22px; border-top: 1px solid color-mix(in srgb, var(--as-mist) 18%, transparent); }
+.as-footer a { display: block; color: color-mix(in srgb, var(--as-mist) 88%, transparent); text-decoration: none; font-size: 12.5px; padding: 8px 0; }
+.as-footer a:hover { color: #fff; }
+
+.as-workspace { margin-left: 264px; min-width: 0; }
+.as-topbar { display: flex; align-items: center; gap: 16px; min-height: 72px; padding: 16px 36px; color: var(--as-mist); background: var(--as-ink); }
+.as-topbar strong { font-size: 15px; }
+.as-topbar-actions { margin-left: auto; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.as-topbar-actions a, .as-topbar-actions button { color: color-mix(in srgb, var(--as-mist) 80%, transparent); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: none; border: 0; cursor: pointer; font-family: inherit; }
+.as-topbar-actions a:hover, .as-topbar-actions button:hover { color: #fff; }
+.admin-shell__body { max-width: 1400px; width: 100%; padding: 32px 36px; margin: auto; min-width: 0; }
+
+.as-burger { display: none; }
+.as-skip { position: fixed; top: 8px; left: 8px; transform: translateY(-200%); z-index: 100; background: #fff; padding: 12px; color: var(--color-ink); }
+.as-skip:focus { transform: none; }
+
+.as-drawer { border: 0; padding: 0; margin: 0; height: 100dvh; max-height: 100dvh; max-width: 88vw; width: 300px; color: var(--as-mist); background: var(--as-ink); }
+.as-drawer::backdrop { background: rgba(3, 4, 94, 0.55); }
+.as-drawer-inner { min-height: 100%; height: 100%; display: flex; flex-direction: column; }
+.as-close { align-self: flex-end; padding: 14px 18px; background: none; border: 0; color: color-mix(in srgb, var(--as-mist) 90%, transparent); font: inherit; font-size: 12px; cursor: pointer; }
+
+@media (max-width: 900px) {
+  .as-sidebar { display: none; }
+  .as-workspace { margin-left: 0; }
+  .as-burger { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid color-mix(in srgb, var(--as-mist) 35%, transparent); border-radius: 8px; background: transparent; color: var(--as-mist); flex-shrink: 0; cursor: pointer; }
+  .as-topbar { padding: 12px 18px; gap: 12px; }
+  .admin-shell__body { padding: 24px 18px; }
+}
+
+@media (max-width: 560px) {
+  .as-topbar strong { font-size: 13px; }
+  .as-topbar-actions { gap: 12px; }
+}
+
+@media print { .as-sidebar, .as-topbar, .as-drawer, .as-skip { display: none !important; } .as-workspace { margin: 0; } .admin-shell__body { padding: 0; max-width: none; } }

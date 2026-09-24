@@ -171,6 +171,12 @@ export const COLLECTIONS: Collection[] = [
       { name: 'address', label: 'Address', type: 'text' },
       { name: 'map_query', label: 'What to search for on the map', type: 'text', help: 'Leave empty to use the venue and address.' },
       { name: 'livestream_url', label: 'Livestream or recording link', type: 'url' },
+      {
+        name: 'flyer_url',
+        label: 'Flyer / poster',
+        type: 'image',
+        help: 'Shown first, above the details, on the Funeral & Events page for this event.',
+      },
       { name: 'description', label: 'Details', type: 'richtext' },
       SORT,
     ],

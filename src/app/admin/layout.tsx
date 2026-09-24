@@ -1,6 +1,4 @@
-import Link from 'next/link';
-import SignOutButton from '@/components/admin/SignOutButton';
-import AdminNav from '@/components/admin/AdminNav';
+import AdminShell, { type AdminNavSection } from '@/components/admin/AdminShell';
 import { getSession } from '@/lib/auth';
 import { COLLECTIONS } from '@/lib/collections';
 import { safeQuery } from '@/lib/content';
@@ -23,83 +21,54 @@ async function pendingCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
+// One icon per collection, picked to read at a glance in the sidebar —
+// matches AdminIcon's shared dictionary (see AdminIcon.tsx).
+const COLLECTION_ICON: Record<string, string> = {
+  biography: 'book',
+  timeline: 'clock',
+  legacy: 'book',
+  photos: 'image',
+  videos: 'play',
+  events: 'calendar',
+  quotes: 'quote',
+  media: 'image',
+  tributes: 'heart',
+  stories: 'message',
+  guestbook: 'message',
+  candles: 'flame',
+};
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
 
   // The sign-in and reset pages render on their own.
   if (!session) return <>{children}</>;
 
-
   const [counts, base] = await Promise.all([pendingCounts(), getAdminBase()]);
   const groups = ['Moderation', 'Content'] as const;
 
+  const sections: AdminNavSection[] = [
+    {
+      label: 'Dashboard',
+      items: [
+        { href: base, label: 'Overview', icon: 'grid' },
+        { href: `${base}/settings`, label: 'Website settings', icon: 'settings' },
+      ],
+    },
+    ...groups.map((group) => ({
+      label: group,
+      items: COLLECTIONS.filter((c) => c.group === group).map((collection) => ({
+        href: `${base}/${collection.slug}`,
+        label: collection.label,
+        icon: COLLECTION_ICON[collection.slug] ?? 'grid',
+        badge: counts[collection.slug] > 0 ? counts[collection.slug] : undefined,
+      })),
+    })),
+  ];
+
   return (
-    <div className="min-h-screen bg-[#eef7fb] text-ink">
-      <header className="border-b border-ink/12 bg-paper">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-5 py-4 md:px-8">
-          <div className="flex items-center gap-4">
-            <Link href={base} className="font-display text-lg leading-none">
-              Memorial admin
-            </Link>
-            <span className="hidden font-util text-[0.68rem] uppercase tracking-[0.12em] text-ink/40 sm:inline">
-              {session.email}
-            </span>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link
-              href="/"
-              target="_blank"
-              className="font-util text-[0.68rem] uppercase tracking-[0.12em] text-ink/50 transition-colors hover:text-ink"
-            >
-              View the website ↗
-            </Link>
-            <SignOutButton loginHref={`${base}/login`} />
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-[1400px] gap-8 px-5 py-8 md:px-8 lg:grid-cols-[220px_1fr] lg:gap-12">
-        <AdminNav>
-          <Link
-            href={base}
-            className="block rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
-          >
-            Overview
-          </Link>
-          <Link
-            href={`${base}/settings`}
-            className="block rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
-          >
-            Website settings
-          </Link>
-
-          {groups.map((group) => (
-            <div key={group} className="mt-5">
-              <p className="px-3 font-util text-[0.62rem] uppercase tracking-[0.16em] text-soft/60">
-                {group}
-              </p>
-              <div className="mt-1.5">
-                {COLLECTIONS.filter((c) => c.group === group).map((collection) => (
-                  <Link
-                    key={collection.slug}
-                    href={`${base}/${collection.slug}`}
-                    className="flex items-center justify-between gap-2 rounded-sm px-3 py-2 font-util text-sm text-mist/85 transition-colors hover:bg-mist/12 hover:text-mist"
-                  >
-                    <span>{collection.label}</span>
-                    {counts[collection.slug] > 0 && (
-                      <span className="rounded-full bg-bright px-1.5 py-0.5 text-[0.62rem] font-medium text-ink">
-                        {counts[collection.slug]}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </AdminNav>
-
-        <div className="min-w-0">{children}</div>
-      </div>
-    </div>
+    <AdminShell base={base} email={session.email} sections={sections} loginHref={`${base}/login`}>
+      {children}
+    </AdminShell>
   );
 }

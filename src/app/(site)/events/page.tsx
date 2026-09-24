@@ -10,11 +10,12 @@ export const metadata = { title: 'Funeral & Events' };
 type EventRow = {
   id: number; title: string; event_date: string | null; time_label: string;
   venue: string; address: string; map_query: string; livestream_url: string; description: string;
+  flyer_url: string;
 };
 
 export default async function EventsPage() {
   const events = await safeQuery<EventRow>(
-    `SELECT id, title, event_date, time_label, venue, address, map_query, livestream_url, description
+    `SELECT id, title, event_date, time_label, venue, address, map_query, livestream_url, description, flyer_url
      FROM events ORDER BY event_date NULLS LAST, sort_order, id`
   );
 
@@ -24,11 +25,19 @@ export default async function EventsPage() {
 
   const renderEvent = (event: EventRow, isPast: boolean) => (
     <Reveal key={event.id}>
-      <article
-        className={`grid gap-8 border-t border-ink/12 py-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14 ${
-          isPast ? 'opacity-70' : ''
-        }`}
-      >
+      <article className={`border-t border-ink/12 py-10 ${isPast ? 'opacity-70' : ''}`}>
+        {event.flyer_url && (
+          <div className="relative mb-8 aspect-[3/2] max-w-2xl overflow-hidden rounded-sm border border-ink/10 bg-paper">
+            <Image
+              src={event.flyer_url}
+              alt={`Flyer for ${event.title}`}
+              fill
+              sizes="(max-width: 1024px) 90vw, 640px"
+              className="object-contain"
+            />
+          </div>
+        )}
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
         <div>
           {event.event_date && (
             <p className="font-util text-[0.72rem] uppercase tracking-[0.16em] text-deep">
@@ -78,6 +87,7 @@ export default async function EventsPage() {
             />
           </div>
         )}
+        </div>
       </article>
     </Reveal>
   );
@@ -103,18 +113,6 @@ export default async function EventsPage() {
               )}
             </>
           )}
-          </div>
-
-          <div className="mt-14 border-t border-ink/12 pt-10">
-            <div className="relative aspect-[3/2] max-w-2xl overflow-hidden rounded-sm border border-ink/10 bg-paper">
-              <Image
-                src="/images/burial-flier.jpg"
-                alt="Announcement of the final burial ceremony and thanksgiving service"
-                fill
-                sizes="(max-width: 1024px) 90vw, 640px"
-                className="object-contain"
-              />
-            </div>
           </div>
         </div>
 
