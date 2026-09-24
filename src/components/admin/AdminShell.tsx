@@ -149,9 +149,6 @@ export default function AdminShell({
           </button>
           <strong>{title}</strong>
           <div className="as-topbar-actions">
-            <Link href="/" target="_blank">
-              View the website ↗
-            </Link>
             <SignOutButton loginHref={loginHref} />
           </div>
         </header>

@@ -47,7 +47,10 @@ export async function safeQuery<T extends Record<string, unknown>>(sql: string, 
   if (!hasDatabase()) return [];
   try {
     return (await query(sql, params)) as T[];
-  } catch {
+  } catch (error) {
+    // Fails soft (an empty list beats a broken page) but never silently —
+    // this is the only trace left when a query breaks in production.
+    console.error('[content] Query failed, returning empty list:', error instanceof Error ? error.message : error);
     return [];
   }
 }

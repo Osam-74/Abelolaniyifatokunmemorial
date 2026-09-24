@@ -3,8 +3,13 @@ import RichText from '@/components/RichText';
 import MemorialSidebar from '@/components/MemorialSidebar';
 import Reveal from '@/components/Reveal';
 import { safeQuery, formatDate } from '@/lib/content';
+import { ensureSchema, hasDatabase } from '@/lib/db';
 
-export const revalidate = 60;
+// Always rendered fresh from the database — this page was once cached as a
+// static snapshot (revalidate) taken before the "flyer" column existed, so a
+// build-time query failure could bake an empty page in until the next
+// deploy. force-dynamic means every visit re-reads the database directly.
+export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Funeral & Events' };
 
 type EventRow = {
@@ -14,6 +19,11 @@ type EventRow = {
 };
 
 export default async function EventsPage() {
+  // Belt-and-suspenders: make sure the schema (including newer columns like
+  // flyer_url) is applied before the query below ever runs, rather than
+  // relying only on the reactive retry-after-error path.
+  if (hasDatabase()) await ensureSchema().catch(() => undefined);
+
   const events = await safeQuery<EventRow>(
     `SELECT id, title, event_date, time_label, venue, address, map_query, livestream_url, description, flyer_url
      FROM events ORDER BY event_date NULLS LAST, sort_order, id`
