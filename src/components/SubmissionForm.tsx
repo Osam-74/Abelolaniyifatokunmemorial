@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FormState } from '@/lib/actions';
+import FormGuard from './FormGuard';
 
 export type Field = {
   name: string;
@@ -65,6 +66,8 @@ export default function SubmissionForm({
         <label htmlFor="website">Website</label>
         <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
+
+      <FormGuard />
 
       <div className="grid gap-5 sm:grid-cols-2">
         {fields.map((field) => (

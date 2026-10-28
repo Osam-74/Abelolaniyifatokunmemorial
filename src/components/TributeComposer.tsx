@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { submitTribute, type FormState } from '@/lib/actions';
+import FormGuard from './FormGuard';
 import TributeIcon, { TRIBUTE_KINDS, type TributeKind } from './TributeIcon';
 
 function PublishButton() {
@@ -28,6 +29,8 @@ export default function TributeComposer() {
         <div aria-hidden="true" className="absolute h-0 w-0 overflow-hidden opacity-0">
           <input name="website" tabIndex={-1} autoComplete="off" />
         </div>
+
+        <FormGuard />
 
         <fieldset>
           <legend className="sr-only">Choose a tribute</legend>

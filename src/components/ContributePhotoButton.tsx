@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { submitPhotograph } from '@/lib/actions';
 import { prepareForUpload } from '@/lib/imageResize';
+import FormGuard from './FormGuard';
 
 type Stage = 'idle' | 'uploading' | 'ready' | 'sending' | 'done' | 'failed';
 
@@ -19,6 +20,7 @@ export default function ContributePhotoButton() {
   const [name, setName] = useState('');
   const [caption, setCaption] = useState('');
   const [error, setError] = useState('');
+  const guardRef = useRef<HTMLDivElement | null>(null);
 
   const openDialog = stage !== 'idle';
 
@@ -73,6 +75,10 @@ export default function ContributePhotoButton() {
     form.append('url', url);
     form.append('name', name.trim());
     form.append('caption', caption.trim());
+    // Anti-spam fields rendered by <FormGuard/> (time-trap stamp + Turnstile token, if enabled).
+    guardRef.current?.querySelectorAll<HTMLInputElement>('input[name]').forEach((el) => {
+      if (el.name === '_t' || el.name === 'cf-turnstile-response') form.append(el.name, el.value);
+    });
     const outcome = await submitPhotograph(null, form);
     if (outcome?.ok) {
       setStage('done');
@@ -169,6 +175,9 @@ export default function ContributePhotoButton() {
 
                 {(stage === 'ready' || stage === 'sending') && (
                   <div className="mt-5 space-y-4">
+                    <div ref={guardRef}>
+                      <FormGuard />
+                    </div>
                     <div>
                       <label htmlFor="contrib-name" className="field-label">
                         Your name

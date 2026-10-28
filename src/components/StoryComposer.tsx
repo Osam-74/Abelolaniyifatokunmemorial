@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import RichTextEditor from './RichTextEditor';
+import FormGuard from './FormGuard';
 import { submitStory, type FormState } from '@/lib/actions';
 
 function PublishButton() {
@@ -28,6 +29,8 @@ export default function StoryComposer() {
         <div aria-hidden="true" className="absolute h-0 w-0 overflow-hidden opacity-0">
           <input name="website" tabIndex={-1} autoComplete="off" />
         </div>
+
+        <FormGuard />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <input name="title" required maxLength={200} placeholder="Title" className="field" />

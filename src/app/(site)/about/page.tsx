@@ -4,7 +4,10 @@ import MemorialSidebar from '@/components/MemorialSidebar';
 import TributeComposer from '@/components/TributeComposer';
 import TributeIcon from '@/components/TributeIcon';
 import RichText from '@/components/RichText';
-import { getProfile, getSetting, safeQuery, formatDate } from '@/lib/content';
+import BiographyChapter from '@/components/BiographyChapter';
+import ChapterRail from '@/components/ChapterRail';
+import { getProfile, getSetting, safeQuery, formatDate, lifespan } from '@/lib/content';
+import { getPublishedChapters, totalReadingMinutes, firstSentences } from '@/lib/biography';
 
 export const revalidate = 30;
 export const metadata = { title: 'About' };
@@ -19,9 +22,10 @@ type EventRow = {
 };
 
 export default async function AboutPage() {
-  const [profile, intro, tributes, events] = await Promise.all([
+  const [profile, intro, chapters, tributes, events] = await Promise.all([
     getProfile(),
     getSetting<{ heading: string; body: string; quote: string }>('intro'),
+    getPublishedChapters(),
     safeQuery<Tribute>(
       `SELECT id, name, relationship, location, message, kind, created_at FROM tributes
        WHERE status = 'approved' ORDER BY featured DESC, created_at DESC LIMIT 60`
@@ -31,6 +35,23 @@ export default async function AboutPage() {
        FROM events ORDER BY event_date NULLS LAST, sort_order LIMIT 3`
     ),
   ]);
+
+  const railItems = chapters.filter((c) => c.showInRail).map((c) => ({ slug: c.slug, label: c.heading, period: c.periodLabel }));
+  const minutes = totalReadingMinutes(chapters);
+
+  // Structured data from REAL fields only: nothing is filled in on the family's behalf.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    mainEntity: {
+      '@type': 'Person',
+      name: profile.fullName,
+      ...(profile.birthDate ? { birthDate: profile.birthDate } : {}),
+      ...(profile.deathDate ? { deathDate: profile.deathDate } : {}),
+      ...(profile.birthPlace ? { birthPlace: { '@type': 'Place', name: profile.birthPlace } } : {}),
+      ...(chapters[0] ? { description: firstSentences(chapters[0].bodyHtml, 240) } : {}),
+    },
+  };
 
   return (
     <div className="mx-auto grid max-w-[1400px] gap-10 px-5 py-10 md:px-10 md:py-14 lg:grid-cols-[1fr_300px] lg:gap-12">
@@ -64,7 +85,7 @@ export default async function AboutPage() {
             )}
 
             {intro.heading && (
-              <h1 className="text-[length:var(--text-title)] leading-tight">{intro.heading}</h1>
+              <h2 className="text-[length:var(--text-title)] leading-tight">{intro.heading}</h2>
             )}
 
             <RichText value={intro.body} className="leading-relaxed text-ink/80" />
@@ -123,6 +144,47 @@ export default async function AboutPage() {
           </p>
         </Reveal>
 
+        <section id="life-story" aria-labelledby="life-story-h" className="scroll-mt-28">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-util text-[0.72rem] uppercase tracking-[0.16em] text-deep">His life story</p>
+              <h2 id="life-story-h" className="mt-1 text-[length:var(--text-display)] leading-[1.05]">
+                {profile.shortName || profile.fullName}
+              </h2>
+              {lifespan(profile) && <p className="mt-2 font-util text-sm text-ink/55">{lifespan(profile)}</p>}
+            </div>
+            {chapters.length > 0 && (
+              <p className="font-util text-[0.78rem] text-ink/50">
+                {chapters.length} {chapters.length === 1 ? 'chapter' : 'chapters'} · about {minutes} min read
+              </p>
+            )}
+          </div>
+
+          {chapters.length === 0 ? (
+            <div className="rounded-sm border border-dashed border-ink/20 bg-mist/30 px-6 py-12 text-center">
+              <p className="font-display text-xl text-ink/80">His story is still being written.</p>
+              <p className="mx-auto mt-2 max-w-md text-[0.95rem] leading-relaxed text-ink/60">
+                The family is gathering the chapters of his life. In the meantime you can read the
+                tributes below, share a memory of your own, or visit the{' '}
+                <Link href="/timeline" className="text-deep underline underline-offset-4">timeline</Link>.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-10 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-12">
+              {railItems.length >= 3 && (
+                <aside className="lg:sticky lg:top-24 lg:self-start">
+                  <ChapterRail items={railItems} />
+                </aside>
+              )}
+              <div className={`space-y-14 ${railItems.length >= 3 ? '' : 'lg:col-span-2'}`}>
+                {chapters.map((chapter, i) => (
+                  <BiographyChapter key={chapter.id} chapter={chapter} index={i} />
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="scroll-mt-28">
           <h2 className="text-[length:var(--text-title)]">Tributes</h2>
 
@@ -159,6 +221,7 @@ export default async function AboutPage() {
       </div>
 
       <MemorialSidebar />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
     </div>
   );
 }

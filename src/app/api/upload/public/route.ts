@@ -1,68 +1,70 @@
 import { NextResponse } from 'next/server';
-import { createHash } from 'node:crypto';
 import { headers } from 'next/headers';
 import { firebaseConfigured, uploadToFirebase } from '@/lib/firebase';
-import { query, queryOne, hasDatabase } from '@/lib/db';
+import { hasDatabase } from '@/lib/db';
+import { clientIpFrom, hashIp } from '@/lib/clientIp';
+import { rateLimit, logSecurityEvent, tooManyResponse } from '@/lib/rateLimit';
+import { sameOrigin } from '@/lib/csrf';
+import { cleanVisitorImage, randomObjectName } from '@/lib/imageSafety';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 const MAX_BYTES = 2 * 1024 * 1024;
-const PER_HOUR = 8;
+const PER_HOUR = 5;
+const PER_DAY = 15;
 
 /**
  * Anyone may send a photograph, so this is deliberately tighter than the
- * admin endpoint: images only, no audio, and a per-visitor hourly cap.
- * Nothing uploaded here appears on the site until the family approves it.
+ * admin endpoint. Every file is checked by its real bytes (not the extension
+ * or Content-Type), size- and dimension-limited, re-encoded (which strips
+ * EXIF/GPS) and stored under a random name. Nothing uploaded here appears on
+ * the site until the family approves it.
  */
 export async function POST(request: Request) {
   if (!firebaseConfigured()) {
-    return NextResponse.json(
-      { error: 'Photograph uploads are not available at the moment.' },
-      { status: 503 }
-    );
+    return NextResponse.json({ error: 'Photograph uploads are not available at the moment.' }, { status: 503 });
   }
   if (!hasDatabase()) {
     return NextResponse.json({ error: 'Not available at the moment.' }, { status: 503 });
   }
 
-  try {
-    const store = await headers();
-    const ip =
-      store.get('x-forwarded-for')?.split(',')[0]?.trim() || store.get('x-real-ip') || 'unknown';
-    const hash = createHash('sha256').update(`${ip}:memorial`).digest('hex').slice(0, 32);
+  const store = await headers();
+  if (!sameOrigin((n) => store.get(n))) {
+    return NextResponse.json({ error: 'That request was not accepted.' }, { status: 403 });
+  }
 
-    const recent = await queryOne<{ n: number }>(
-      `SELECT count(*)::int AS n FROM submission_log
-       WHERE ip_hash = $1 AND kind = 'photo' AND created_at > now() - interval '1 hour'`,
-      [hash]
+  const hash = hashIp(clientIpFrom((n) => store.get(n)));
+  const hour = await rateLimit(`upload:public:${hash}:h`, PER_HOUR, 3600);
+  const day = hour.ok ? await rateLimit(`upload:public:${hash}:d`, PER_DAY, 86400) : hour;
+  if (!hour.ok || !day.ok) {
+    await logSecurityEvent('rate_limited', 'api:upload/public', hash);
+    return tooManyResponse(
+      (!hour.ok ? hour : day).retryAfter,
+      'You have sent several photographs already. Please come back later today.'
     );
-    if ((recent?.n ?? 0) >= PER_HOUR) {
-      return NextResponse.json(
-        { error: 'You have sent several photographs already. Please come back later today.' },
-        { status: 429 }
-      );
-    }
+  }
 
+  try {
     const form = await request.formData();
     const file = form.get('file');
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'No photograph was received.' }, { status: 400 });
     }
-    if (!ALLOWED.includes(file.type)) {
-      return NextResponse.json({ error: 'Use a JPG, PNG or WebP image.' }, { status: 400 });
-    }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: 'That image is larger than 2 MB.' }, { status: 400 });
     }
 
-    await query('INSERT INTO submission_log (ip_hash, kind) VALUES ($1, $2)', [hash, 'photo']);
+    let clean;
+    try {
+      clean = await cleanVisitorImage(Buffer.from(await file.arrayBuffer()));
+    } catch (error) {
+      await logSecurityEvent('bad_image', 'api:upload/public', hash);
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'That file was not accepted.' }, { status: 400 });
+    }
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-').slice(-80);
-    const key = `memorial/contributed/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-    const { url } = await uploadToFirebase(file, key);
-
+    const safe = new File([new Uint8Array(clean.buffer)], randomObjectName(clean.ext), { type: clean.contentType });
+    const { url } = await uploadToFirebase(safe, `memorial/contributed/${safe.name}`);
     return NextResponse.json({ url });
   } catch (error) {
     console.error('[public upload]', error instanceof Error ? error.message : error);

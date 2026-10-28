@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { getSession } from '@/lib/auth';
 import { firebaseConfigured, uploadToFirebase } from '@/lib/firebase';
+import { sameOrigin } from '@/lib/csrf';
+import { rateLimit, tooManyResponse } from '@/lib/rateLimit';
+import { sniffImageType } from '@/lib/imageSafety';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -13,6 +17,14 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
   }
+
+  const store = await headers();
+  if (!sameOrigin((n) => store.get(n))) {
+    return NextResponse.json({ error: 'That request was not accepted.' }, { status: 403 });
+  }
+  // Generous (a batch upload sends many files) but not unlimited.
+  const limited = await rateLimit(`upload:admin:${session.email}`, 200, 3600);
+  if (!limited.ok) return tooManyResponse(limited.retryAfter, 'Too many uploads. Please wait a little and try again.');
 
   const usingFirebase = firebaseConfigured();
   const usingBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
@@ -43,6 +55,14 @@ export async function POST(request: Request) {
       },
       { status: 400 }
     );
+  }
+
+  // Trust the file's own bytes, not the Content-Type the browser claimed.
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const isMp3 = file.type === 'audio/mpeg'
+    && ((head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33) || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0));
+  if (!isMp3 && !sniffImageType(head)) {
+    return NextResponse.json({ error: 'That file does not look like a real image or MP3.' }, { status: 400 });
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-').slice(-80);

@@ -173,3 +173,92 @@ UPDATE photos SET status = 'approved' WHERE status IS NULL OR status = '';
 -- Each event can carry its own flyer/poster, uploaded from the admin and
 -- shown first (above the details) on the Funeral & Events page.
 ALTER TABLE events ADD COLUMN IF NOT EXISTS flyer_url TEXT DEFAULT '';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Biography redesign, admin control, security hardening, email notifications.
+   ADDITIVE ONLY: new columns have safe defaults, nothing is dropped or
+   rewritten, and every statement is safe to run repeatedly.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- ── Biography chapters (bio_sections) ──────────────────────────────────────
+-- Existing rows keep rendering: they become 'published' with layout 'auto'.
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS subheading TEXT DEFAULT '';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS period_label TEXT DEFAULT '';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS image_alt TEXT DEFAULT '';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS image_caption TEXT DEFAULT '';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS focal_x INT NOT NULL DEFAULT 50;
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS focal_y INT NOT NULL DEFAULT 50;
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS layout TEXT NOT NULL DEFAULT 'auto';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS quote_attribution TEXT DEFAULT '';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS show_in_rail BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'published';
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE bio_sections ADD COLUMN IF NOT EXISTS updated_by TEXT DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_bio_sections_public ON bio_sections (status, deleted_at, sort_order);
+
+-- Last ~10 versions of each chapter, so a bad edit can be rolled back.
+CREATE TABLE IF NOT EXISTS bio_revisions (
+  id SERIAL PRIMARY KEY,
+  section_id INT NOT NULL,
+  snapshot JSONB NOT NULL,
+  saved_by TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_bio_revisions_section ON bio_revisions (section_id, created_at DESC);
+
+-- Who changed what, and when. Shown on the dashboard.
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  id SERIAL PRIMARY KEY,
+  admin_email TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,
+  entity TEXT NOT NULL DEFAULT '',
+  entity_id TEXT NOT NULL DEFAULT '',
+  detail TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_recent ON admin_audit_log (created_at DESC);
+
+-- ── Spam handling on visitor submissions ───────────────────────────────────
+-- Why a submission was held or rejected, so the family can see the reason.
+ALTER TABLE tributes ADD COLUMN IF NOT EXISTS hold_reason TEXT DEFAULT '';
+ALTER TABLE guestbook ADD COLUMN IF NOT EXISTS hold_reason TEXT DEFAULT '';
+ALTER TABLE stories ADD COLUMN IF NOT EXISTS hold_reason TEXT DEFAULT '';
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS hold_reason TEXT DEFAULT '';
+
+-- ── General-purpose rate limiter (fixed windows; the key holds a hashed IP) ─
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT NOT NULL,
+  window_start TIMESTAMPTZ NOT NULL,
+  hits INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (key, window_start)
+);
+CREATE INDEX IF NOT EXISTS idx_rate_limits_window ON rate_limits (window_start);
+
+-- Blocked events, kept without personal data, for the dashboard.
+CREATE TABLE IF NOT EXISTS security_events (
+  id SERIAL PRIMARY KEY,
+  kind TEXT NOT NULL,
+  route TEXT NOT NULL DEFAULT '',
+  ip_hash TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_security_events_recent ON security_events (created_at DESC);
+
+-- ── Email notification outbox ──────────────────────────────────────────────
+-- Every notification is recorded here first. If the mail provider is down or
+-- not configured yet, nothing is lost: it stays 'queued' and is retried.
+CREATE TABLE IF NOT EXISTS email_outbox (
+  id SERIAL PRIMARY KEY,
+  kind TEXT NOT NULL,
+  to_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body_text TEXT NOT NULL,
+  body_html TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'queued',
+  attempts INT NOT NULL DEFAULT 0,
+  last_error TEXT DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  sent_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_email_outbox_status ON email_outbox (status, created_at);

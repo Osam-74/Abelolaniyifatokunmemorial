@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { clientIpFrom, hashIp } from '@/lib/clientIp';
+import { rateLimit, logSecurityEvent, tooManyResponse } from '@/lib/rateLimit';
+import { sameOrigin } from '@/lib/csrf';
 import { verifyFirebaseIdToken, firebaseProjectId } from '@/lib/verifyFirebaseToken';
 import { mintSessionToken, isAllowed, allowedEmails, SESSION_COOKIE, cookieOptions } from '@/lib/auth';
 
@@ -17,6 +21,21 @@ const UNAVAILABLE =
 
 export async function POST(request: Request) {
   try {
+    const store = await headers();
+    if (!sameOrigin((n) => store.get(n))) {
+      return refuse(403, 'Sign-in could not be completed. Please try again.', 'Cross-origin sign-in attempt refused.');
+    }
+
+    // Brute-force guard. 8 attempts per 15 minutes, then 30 per day, per visitor.
+    // `strict`: if the limiter itself is unreachable, sign-in is refused (fails closed).
+    const hash = hashIp(clientIpFrom((n) => store.get(n)));
+    const short = await rateLimit(`login:${hash}:15m`, 8, 900, { strict: true });
+    const long = short.ok ? await rateLimit(`login:${hash}:1d`, 30, 86400, { strict: true }) : short;
+    if (!short.ok || !long.ok) {
+      await logSecurityEvent('login_blocked', 'api:auth/session', hash);
+      return tooManyResponse((!short.ok ? short : long).retryAfter, 'Too many sign-in attempts. Please wait a little and try again.');
+    }
+
     if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 24) {
       return refuse(503, UNAVAILABLE, 'AUTH_SECRET is missing or shorter than 24 characters.');
     }

@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { clientIpFrom, hashIp } from '@/lib/clientIp';
+import { rateLimit, tooManyResponse } from '@/lib/rateLimit';
+import { mailProvider, notificationsEnabled, notifyRecipients } from '@/lib/mail';
+import { turnstileEnabled } from '@/lib/turnstile';
 import { adminConfigProblem, resolveBucketName } from '@/lib/firebase';
 import { firebaseProjectId } from '@/lib/verifyFirebaseToken';
 
@@ -10,6 +15,10 @@ export const dynamic = 'force-dynamic';
  * Visit /api/health to find out what is missing without reading server logs.
  */
 export async function GET() {
+  const store = await headers();
+  const limited = await rateLimit(`health:${hashIp(clientIpFrom((n) => store.get(n)))}`, 30, 60);
+  if (!limited.ok) return tooManyResponse(limited.retryAfter);
+
   const storage = await resolveBucketName().catch(() => ({ name: null, tried: [] as string[] }));
   const secret = process.env.AUTH_SECRET ?? '';
   const emails = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean);
@@ -42,5 +51,12 @@ export async function GET() {
       appId: Boolean(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
     },
     siteUrl: Boolean(process.env.NEXT_PUBLIC_SITE_URL),
+    email: {
+      provider: mailProvider(), // 'smtp' | 'resend' | 'none'
+      enabled: notificationsEnabled(),
+      recipients: notifyRecipients().length,
+      cronSecret: Boolean(process.env.CRON_SECRET),
+    },
+    turnstile: { enabled: turnstileEnabled() },
   });
 }
