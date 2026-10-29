@@ -1,10 +1,11 @@
 import type { MetadataRoute } from 'next';
+import { siteOrigin } from '@/lib/siteUrl';
 import { safeQuery } from '@/lib/content';
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+  const base = siteOrigin();
   if (!base) return [];
 
   const pages = [

@@ -3,6 +3,8 @@ import nodemailer from 'nodemailer';
 import { createHmac } from 'node:crypto';
 import { query, queryOne, hasDatabase } from './db';
 import { allowedEmails } from './auth';
+import { siteOrigin } from './siteUrl';
+import { configuredAdminPath } from './adminPath';
 
 /**
  * Email notifications for the family.
@@ -53,14 +55,10 @@ export function notificationsEnabled(): boolean {
   return process.env.NOTIFY_ENABLED !== '0';
 }
 
-function siteUrl(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-}
-
 function adminUrl(path = ''): string {
-  const base = (process.env.ADMIN_PATH || '/admin').replace(/\/$/, '');
-  const site = siteUrl();
-  return site ? `${site}${base}${path}` : '';
+  // Same normalising rules the admin router uses, and the canonical host, so the
+  // link in an email always opens the real admin area.
+  return `${siteOrigin()}${configuredAdminPath()}${path}`;
 }
 
 export function escapeHtml(s: string): string {

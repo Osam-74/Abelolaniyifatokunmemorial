@@ -100,3 +100,22 @@ export async function requireSession(): Promise<Session> {
   if (!session) throw new Error('UNAUTHORISED');
   return session;
 }
+
+/**
+ * True when the current admin signed in within the last `minutes` minutes.
+ * Used to ask for a fresh sign-in before destructive actions (permanent
+ * delete, restoring an old version), so an unattended, still-open browser
+ * cannot be used to wipe the life story.
+ */
+export async function signedInWithin(minutes: number): Promise<boolean> {
+  try {
+    const store = await cookies();
+    const token = store.get(COOKIE)?.value;
+    if (!token) return false;
+    const { payload } = await jwtVerify(token, secret());
+    const iat = typeof payload.iat === 'number' ? payload.iat : 0;
+    return Date.now() / 1000 - iat <= minutes * 60;
+  } catch {
+    return false;
+  }
+}

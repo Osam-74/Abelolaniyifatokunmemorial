@@ -6,6 +6,7 @@ import { query, queryOne, ensureSchema } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { findCollection, SETTING_GROUPS, type Collection, type FieldDef } from '@/lib/collections';
 import { getAdminBase } from '@/lib/adminPath';
+import { audit } from '@/lib/audit';
 
 export type ActionState = { ok: boolean; message: string } | null;
 
@@ -154,6 +155,7 @@ async function saveRowInner(form: FormData): Promise<ActionState> {
   }
 
   refresh(collection);
+  await audit(session.email, id ? 'edit' : 'create', collection.slug, id ?? 'new', String(values[0] ?? '').slice(0, 120));
   return { ok: true, message: id ? 'Changes saved.' : `New ${collection.singular} added.` };
 }
 
@@ -164,6 +166,7 @@ export async function deleteRow(slug: string, id: number): Promise<void> {
   if (!collection) return;
   await query(`DELETE FROM ${collection.table} WHERE id = $1`, [id]);
   refresh(collection);
+  await audit(session.email, 'delete', collection.slug, id);
 }
 
 export async function setStatus(slug: string, id: number, status: string): Promise<void> {
@@ -174,6 +177,7 @@ export async function setStatus(slug: string, id: number, status: string): Promi
   if (!['pending', 'approved', 'rejected'].includes(status)) return;
   await query(`UPDATE ${collection.table} SET status = $1 WHERE id = $2`, [status, id]);
   refresh(collection);
+  await audit(session.email, `status:${status}`, collection.slug, id);
 }
 
 export async function toggleFeatured(slug: string, id: number, value: boolean): Promise<void> {

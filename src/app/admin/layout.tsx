@@ -67,8 +67,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <AdminShell base={base} email={session.email} sections={sections} loginHref={`${base}/login`}>
-      {children}
-    </AdminShell>
+    // display:contents adds no box, so the admin looks exactly as before; the
+    // attribute only tells the image-save guard to stand down while editing.
+    <div data-admin-area style={{ display: 'contents' }}>
+      <AdminShell base={base} email={session.email} sections={sections} loginHref={`${base}/login`}>
+        {children}
+      </AdminShell>
+    </div>
   );
 }

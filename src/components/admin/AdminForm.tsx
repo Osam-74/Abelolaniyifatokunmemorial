@@ -7,7 +7,7 @@ import type { ActionState } from '@/app/admin/actions';
 import { prepareForUpload } from '@/lib/imageResize';
 import RichTextEditor from '@/components/RichTextEditor';
 
-function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: string }) {
+export function ImageField({ field, defaultValue }: { field: FieldDef; defaultValue: string }) {
   const [value, setValue] = useState(defaultValue);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

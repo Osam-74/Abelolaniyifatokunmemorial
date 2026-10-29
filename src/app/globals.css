@@ -252,3 +252,7 @@
   margin: 0 0 1.35em;
 }
 .story-body strong { font-weight: 600; }
+
+/* Photographs: no long-press save sheet on iOS and no drag ghost. Text and links are untouched. */
+img { -webkit-touch-callout: none; }
+img:not([data-allow-drag]) { -webkit-user-drag: none; user-drag: none; }

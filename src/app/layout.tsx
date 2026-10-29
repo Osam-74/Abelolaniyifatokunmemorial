@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Fraunces, Newsreader, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 import { getSetting } from '@/lib/content';
+import { siteOrigin, absoluteUrl } from '@/lib/siteUrl';
+import ContentGuard from '@/components/ContentGuard';
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -32,19 +34,21 @@ export const viewport: Viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await getSetting<{ title: string; description: string; ogImage: string }>('seo');
-  const base = process.env.NEXT_PUBLIC_SITE_URL;
-
   return {
-    metadataBase: base ? new URL(base) : undefined,
+    metadataBase: new URL(siteOrigin()),
     title: { default: seo.title, template: `%s — ${seo.title}` },
     description: seo.description,
     openGraph: {
       title: seo.title,
       description: seo.description,
       type: 'profile',
-      images: seo.ogImage ? [{ url: seo.ogImage, width: 800, height: 800 }] : undefined,
+      images: seo.ogImage ? [{ url: absoluteUrl(seo.ogImage), width: 800, height: 800 }] : undefined,
     },
-    twitter: { card: 'summary_large_image', title: seo.title, description: seo.description },
+    twitter: {
+      card: 'summary_large_image', title: seo.title, description: seo.description,
+      images: seo.ogImage ? [absoluteUrl(seo.ogImage)] : undefined,
+    },
+    alternates: { canonical: siteOrigin() },
     robots: { index: true, follow: true },
   };
 }
@@ -52,7 +56,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${newsreader.variable} ${plex.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ContentGuard />
+      </body>
     </html>
   );
 }

@@ -5,6 +5,11 @@ import { getProfile, getSetting, safeQuery } from '@/lib/content';
 import { hasDatabase } from '@/lib/db';
 import { resolveAudio } from '@/lib/resolveAudio';
 import { getAdminBase } from '@/lib/adminPath';
+import { formatDate } from '@/lib/content';
+import { mailProvider, notifyRecipients } from '@/lib/mail';
+import { turnstileEnabled } from '@/lib/turnstile';
+import { findPublishedSpam } from './tools-actions';
+import { TestEmailButton, RejectSpamButton } from '@/components/admin/ToolButtons';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,15 +38,43 @@ export default async function AdminHome() {
 
   const tablesReady = Object.keys(counts).length > 0;
 
+  // Biography health, recent activity and protection stats (all best-effort: a failure shows nothing, never an error).
+  const [chapterStats, noAlt, recent, blocked, outbox, publishedSpam] = connected
+    ? await Promise.all([
+        safeQuery<{ published: number; drafts: number }>(
+          `SELECT count(*) FILTER (WHERE status = 'published' AND deleted_at IS NULL)::int AS published,
+                  count(*) FILTER (WHERE status <> 'published' AND deleted_at IS NULL)::int AS drafts FROM bio_sections`
+        ),
+        safeQuery<{ n: number }>(
+          `SELECT count(*)::int AS n FROM bio_sections WHERE deleted_at IS NULL AND image_url <> '' AND coalesce(image_alt, '') = ''`
+        ),
+        safeQuery<{ admin_email: string; action: string; entity: string; detail: string; created_at: string }>(
+          `SELECT admin_email, action, entity, detail, created_at FROM admin_audit_log ORDER BY id DESC LIMIT 8`
+        ),
+        safeQuery<{ kind: string; n: number }>(
+          `SELECT kind, count(*)::int AS n FROM security_events WHERE created_at > now() - interval '7 days' GROUP BY kind`
+        ),
+        safeQuery<{ status: string; n: number }>(`SELECT status, count(*)::int AS n FROM email_outbox GROUP BY status`),
+        findPublishedSpam().catch(() => []),
+      ])
+    : [[], [], [], [], [], []];
+
+  const published = chapterStats[0]?.published ?? 0;
+  const drafts = chapterStats[0]?.drafts ?? 0;
+  const blockedTotal = (blocked as { n: number }[]).reduce((a, b) => a + b.n, 0);
+  const queued = (outbox as { status: string; n: number }[]).find((o) => o.status === 'queued')?.n ?? 0;
+  const failedMail = (outbox as { status: string; n: number }[]).find((o) => o.status === 'failed')?.n ?? 0;
+  const provider = mailProvider();
+
   const todo = [
     !profile.birthDate && { label: 'Add his date of birth', href: `${base}/settings#profile` },
     !profile.deathDate && { label: 'Add his date of passing', href: `${base}/settings#profile` },
     (counts.photos?.total ?? 0) < 3 && { label: 'Upload family photographs', href: `${base}/photos` },
     (counts.timeline?.total ?? 0) < 3 && { label: 'Build out the timeline', href: `${base}/timeline` },
-    !profile.birthPlace && {
-      label: 'Add his place of birth',
-      href: `${base}/biography`,
-    },
+    published === 0 && { label: 'Publish the first chapter of his life story', href: `${base}/biography` },
+    drafts > 0 && { label: `Review ${drafts} unpublished ${drafts === 1 ? 'chapter' : 'chapters'}`, href: `${base}/biography` },
+    (noAlt[0] as { n: number } | undefined)?.n ? { label: `Describe ${(noAlt[0] as { n: number }).n} chapter ${(noAlt[0] as { n: number }).n === 1 ? 'photograph' : 'photographs'} for screen readers`, href: `${base}/biography` } : false,
+    provider === 'none' && { label: 'Connect email so you are told about new tributes', href: `${base}/settings#email` },
     (counts.videos?.total ?? 0) === 0 && { label: 'Add a tribute video', href: `${base}/videos` },
   ].filter(Boolean) as { label: string; href: string }[];
 
@@ -81,6 +114,69 @@ export default async function AdminHome() {
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {(publishedSpam as unknown[]).length > 0 && (
+        <div className="rounded-sm border border-flame/50 bg-flame/10 px-6 py-5">
+          <h2 className="font-display text-xl">
+            {(publishedSpam as unknown[]).length} published {(publishedSpam as unknown[]).length === 1 ? 'message looks' : 'messages look'} like advertising
+          </h2>
+          <p className="mt-1 max-w-2xl text-[0.9rem] text-ink/65">
+            These were posted before approval was switched on. They are not removed automatically, so a real tribute is never hidden by mistake. Open each list and choose Reject on the ones you agree are spam.
+          </p>
+          <ul className="mt-3 space-y-1.5 text-[0.85rem] text-ink/70">
+            {(publishedSpam as Array<{ table: string; id: number; name: string; preview: string }>).slice(0, 12).map((x) => (
+              <li key={`${x.table}-${x.id}`}>
+                <Link href={`${base}/${x.table}`} className="underline decoration-ink/20 underline-offset-4 hover:text-deep">
+                  {x.name || 'Unknown'} ({x.table})
+                </Link>
+                <span className="text-ink/45">: {x.preview}…</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {tablesReady && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-3 rounded-sm border border-ink/12 bg-paper p-5">
+            <h2 className="font-display text-lg">Life story</h2>
+            <p className="text-[0.9rem] text-ink/65">{published} published · {drafts} {drafts === 1 ? 'draft' : 'drafts'}</p>
+            <Link href={`${base}/biography`} className="font-util text-[0.7rem] uppercase tracking-[0.1em] text-deep underline underline-offset-4">Manage chapters</Link>
+          </div>
+          <div className="space-y-3 rounded-sm border border-ink/12 bg-paper p-5">
+            <h2 className="font-display text-lg">Email notices</h2>
+            <p className="text-[0.9rem] text-ink/65">
+              {provider === 'none'
+                ? 'Not connected yet. New tributes are saved and will be emailed once it is.'
+                : `Connected (${provider}). Sending to ${notifyRecipients().length} ${notifyRecipients().length === 1 ? 'address' : 'addresses'}.`}
+              {queued > 0 && ` ${queued} waiting to send.`}
+              {failedMail > 0 && ` ${failedMail} could not be sent.`}
+            </p>
+            <TestEmailButton />
+          </div>
+          <div className="space-y-3 rounded-sm border border-ink/12 bg-paper p-5">
+            <h2 className="font-display text-lg">Spam protection</h2>
+            <p className="text-[0.9rem] text-ink/65">
+              {blockedTotal} automatic {blockedTotal === 1 ? 'block' : 'blocks'} in the last 7 days.
+              {turnstileEnabled() ? ' The “I am a person” check is on.' : ' The “I am a person” check is not switched on yet.'}
+            </p>
+            <RejectSpamButton />
+          </div>
+        </div>
+      )}
+
+      {(recent as unknown[]).length > 0 && (
+        <div className="rounded-sm border border-ink/12 bg-paper p-6">
+          <h2 className="font-display text-xl">Recent changes</h2>
+          <ul className="mt-3 space-y-1.5 text-[0.88rem] text-ink/70">
+            {(recent as Array<{ admin_email: string; action: string; entity: string; detail: string; created_at: string }>).map((r, i) => (
+              <li key={i}>
+                <span className="text-ink/45">{formatDate(String(r.created_at))}</span> · {r.admin_email.split('@')[0]} · {r.action.replace(/[:_-]/g, ' ')} ({r.entity}){r.detail ? `: ${r.detail}` : ''}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
