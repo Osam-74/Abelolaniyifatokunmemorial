@@ -22,7 +22,7 @@ export default function SiteHeader({
 
       <header className="border-b border-ink/10 bg-paper">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-5 py-3 md:px-10">
-          <Link href="/about" className="flex min-w-0 items-center gap-3 text-ink">
+          <Link href="/biography" className="flex min-w-0 items-center gap-3 text-ink">
             <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-mist">
               <Image src={portrait} alt="" fill sizes="36px" className="object-cover object-top" />
             </span>
@@ -30,7 +30,7 @@ export default function SiteHeader({
           </Link>
 
           <Link
-            href="/about#tribute"
+            href="/tributes#tribute"
             className="shrink-0 rounded-full bg-ink px-4 py-2 font-util text-[0.68rem] uppercase tracking-[0.12em] text-mist transition-colors hover:bg-deep sm:px-5"
           >
             Leave a tribute

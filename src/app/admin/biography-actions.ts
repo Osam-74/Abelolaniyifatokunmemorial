@@ -31,7 +31,7 @@ async function admin() {
 }
 
 function refreshAll() {
-  revalidatePath('/about');
+  revalidatePath('/biography');
   revalidatePath('/');
   revalidatePath('/admin/biography', 'page');
   revalidatePath('/admin', 'page');

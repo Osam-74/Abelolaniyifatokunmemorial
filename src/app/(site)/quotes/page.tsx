@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
+// Old address kept alive so links people already shared still work.
 export default function Page() {
-  redirect('/life#words');
+  permanentRedirect('/biography#words');
 }

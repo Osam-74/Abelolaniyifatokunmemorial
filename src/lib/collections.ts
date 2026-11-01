@@ -172,6 +172,14 @@ export const COLLECTIONS: Collection[] = [
       { name: 'map_query', label: 'What to search for on the map', type: 'text', help: 'Leave empty to use the venue and address.' },
       { name: 'livestream_url', label: 'Livestream or recording link', type: 'url' },
       {
+        name: 'held_state',
+        label: 'Has this taken place?',
+        type: 'select',
+        options: ['auto|Automatic (from the date)', 'held|Yes, it has been held', 'upcoming|No, still to come'],
+        help: 'Automatic: it counts as held the day after its date. Choose "held" to mark it as done now, or "upcoming" to keep it listed as still to come (for example if it was postponed).',
+      },
+      { name: 'held_note', label: 'A line about the day (shown once it has been held)', type: 'text', placeholder: 'For example: Thank you to everyone who joined us.' },
+      {
         name: 'flyer_url',
         label: 'Flyer / poster',
         type: 'image',

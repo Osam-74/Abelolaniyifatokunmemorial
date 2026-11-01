@@ -91,7 +91,7 @@ export async function rejectSpamPending(_prev: ToolState): Promise<ToolState> {
       }
     }
     await audit(session.email, 'reject-spam', 'moderation', 'bulk', `${total} rejected`);
-    for (const p of ['/', '/about', '/tributes', '/guestbook', '/stories']) revalidatePath(p);
+    for (const p of ['/', '/tributes', '/guestbook', '/stories']) revalidatePath(p);
     revalidatePath('/', 'layout');
     return {
       ok: true,

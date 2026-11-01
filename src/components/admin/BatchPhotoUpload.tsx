@@ -17,8 +17,11 @@ type Item = {
   error?: string;
 };
 
-export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
+export type EventChoice = { id: number; title: string };
+
+export default function BatchPhotoUpload({ albums, events = [] }: { albums: string[]; events?: EventChoice[] }) {
   const [items, setItems] = useState<Item[]>([]);
+  const [eventId, setEventId] = useState<number | ''>('');
   const [album, setAlbum] = useState(albums[0] ?? 'A Life Remembered');
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, startSaving] = useTransition();
@@ -106,7 +109,8 @@ export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
           caption: item.caption.trim(),
           album: album.trim() || 'A Life Remembered',
           takenOn: item.takenOn.trim(),
-        }))
+        })),
+        eventId === '' ? null : eventId
       );
       setResult(outcome);
       if (outcome.ok) setItems([]);
@@ -115,6 +119,34 @@ export default function BatchPhotoUpload({ albums }: { albums: string[] }) {
 
   return (
     <div className="space-y-6">
+      {events.length > 0 && (
+        <div>
+          <label htmlFor="batch-event" className="field-label">
+            Were these taken at an event?
+          </label>
+          <select
+            id="batch-event"
+            value={eventId}
+            onChange={(event) => {
+              const next = event.target.value === '' ? '' : Number(event.target.value);
+              setEventId(next);
+              // Photographs from an event are filed in an album with the event's name.
+              const chosen = events.find((e) => e.id === next);
+              if (chosen) setAlbum(chosen.title);
+            }}
+            className="field max-w-sm"
+          >
+            <option value="">No, just add them to the gallery</option>
+            {events.map((e) => (
+              <option key={e.id} value={e.id}>{e.title}</option>
+            ))}
+          </select>
+          <p className="mt-1.5 font-util text-[0.72rem] text-ink/45">
+            Choose an event and these appear under &ldquo;Photographs from the day&rdquo; on the Funeral &amp; Events page, as well as in the gallery.
+          </p>
+        </div>
+      )}
+
       <div>
         <label htmlFor="batch-album" className="field-label">
           Album for this batch

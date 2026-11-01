@@ -62,7 +62,7 @@ export default async function MemorialSidebar() {
             </li>
           ))}
         </ul>
-        <Link href="/about#tribute" className="btn btn-primary mt-5 w-full">
+        <Link href="/tributes#tribute" className="btn btn-primary mt-5 w-full">
           Leave a tribute
         </Link>
       </div>

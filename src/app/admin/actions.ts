@@ -7,6 +7,8 @@ import { getSession } from '@/lib/auth';
 import { findCollection, SETTING_GROUPS, type Collection, type FieldDef } from '@/lib/collections';
 import { getAdminBase } from '@/lib/adminPath';
 import { audit } from '@/lib/audit';
+import { headers } from 'next/headers';
+import { sameOrigin } from '@/lib/csrf';
 
 export type ActionState = { ok: boolean; message: string } | null;
 
@@ -57,6 +59,11 @@ function coerce(field: FieldDef, raw: FormDataEntryValue | null): unknown {
       return value === '' ? 0 : Number(value);
     case 'date':
       return value === '' ? null : value;
+    case 'select': {
+      // Only a value the form actually offers is accepted; anything else falls back to the first option.
+      const allowed = (field.options ?? []).map((o) => o.split('|')[0]);
+      return allowed.includes(value) ? value : (allowed[0] ?? '');
+    }
     default:
       return value.trim();
   }
@@ -64,18 +71,18 @@ function coerce(field: FieldDef, raw: FormDataEntryValue | null): unknown {
 
 function publicPathsFor(collection: Collection): string[] {
   const map: Record<string, string[]> = {
-    biography: ['/', '/about'],
-    timeline: ['/', '/timeline'],
-    legacy: ['/', '/life-and-legacy'],
+    biography: ['/', '/biography'],
+    timeline: ['/', '/biography'],
+    legacy: ['/', '/biography'],
     photos: ['/', '/gallery'],
     videos: ['/videos'],
-    events: ['/', '/events'],
-    quotes: ['/', '/quotes'],
-    media: ['/media'],
+    events: ['/', '/events', '/tributes'],
+    quotes: ['/', '/biography'],
+    media: ['/biography'],
     tributes: ['/', '/tributes'],
     stories: ['/', '/stories'],
     guestbook: ['/guestbook'],
-    candles: ['/', '/candles'],
+    candles: ['/', '/tributes'],
   };
   return map[collection.slug] ?? ['/'];
 }
@@ -263,15 +270,25 @@ export async function runSetup(): Promise<ActionState> {
 /* ─────────────── Batch photograph upload ─────────────── */
 
 export async function savePhotoBatch(
-  photos: { url: string; caption: string; album: string; takenOn: string }[]
+  photos: { url: string; caption: string; album: string; takenOn: string }[],
+  eventId: number | null = null
 ): Promise<{ ok: boolean; message: string }> {
   const session = await getSession();
   if (!session) redirect(`${await getAdminBase()}/login`);
+  const store = await headers();
+  if (!sameOrigin((n) => store.get(n))) return { ok: false, message: 'That request was not accepted.' };
 
   const usable = photos.filter((photo) => photo.url.trim());
   if (usable.length === 0) return { ok: false, message: 'No photographs were ready to add.' };
 
   try {
+    // Only link to an event that really exists; a bad id becomes "no event" rather than an orphan.
+    let linkedEvent: number | null = null;
+    if (eventId !== null && Number.isInteger(eventId)) {
+      const found = await queryOne<{ id: number }>('SELECT id FROM events WHERE id = $1', [eventId]);
+      linkedEvent = found?.id ?? null;
+    }
+
     const start = await queryOne<{ next: number }>(
       'SELECT coalesce(max(sort_order), 0) + 1 AS next FROM photos'
     );
@@ -279,15 +296,16 @@ export async function savePhotoBatch(
 
     const values: unknown[] = [];
     const rows = usable.map((photo, index) => {
-      values.push(photo.url.trim(), photo.caption, photo.album, photo.takenOn, base + index);
-      const o = index * 5;
-      return `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5})`;
+      values.push(photo.url.trim(), photo.caption.slice(0, 400), photo.album.slice(0, 120), photo.takenOn.slice(0, 60), base + index, linkedEvent);
+      const o = index * 6;
+      return `($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6})`;
     });
 
     await query(
-      `INSERT INTO photos (url, caption, album, taken_on, sort_order) VALUES ${rows.join(', ')}`,
+      `INSERT INTO photos (url, caption, album, taken_on, sort_order, event_id) VALUES ${rows.join(', ')}`,
       values
     );
+    await audit(session.email, 'photos-added', 'photos', linkedEvent ?? 'gallery', `${usable.length} photograph(s)`);
   } catch (error) {
     return {
       ok: false,
@@ -297,10 +315,11 @@ export async function savePhotoBatch(
 
   revalidatePath('/');
   revalidatePath('/gallery');
+  revalidatePath('/events');
   revalidatePath('/admin/photos');
   return {
     ok: true,
-    message: `${usable.length} ${usable.length === 1 ? 'photograph' : 'photographs'} added to the gallery.`,
+    message: `${usable.length} ${usable.length === 1 ? 'photograph' : 'photographs'} added${eventId !== null ? ' to the event and the gallery' : ' to the gallery'}.`,
   };
 }
 

@@ -180,11 +180,15 @@ function Field({ field, value }: { field: FieldDef; value: unknown }) {
 
       {field.type === 'select' ? (
         <select id={field.name} name={field.name} defaultValue={stringValue} className="field">
-          {field.options?.map((option) => (
-            <option key={option} value={option}>
-              {option[0].toUpperCase() + option.slice(1)}
-            </option>
-          ))}
+          {field.options?.map((option) => {
+            // "value|Label" lets a field show friendly wording; a plain string keeps the old behaviour.
+            const [value, label] = option.includes('|') ? option.split('|') : [option, option[0].toUpperCase() + option.slice(1)];
+            return (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            );
+          })}
         </select>
       ) : field.type === 'textarea' || field.type === 'longtext' ? (
         <textarea

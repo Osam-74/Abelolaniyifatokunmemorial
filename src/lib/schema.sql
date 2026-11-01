@@ -262,3 +262,17 @@ CREATE TABLE IF NOT EXISTS email_outbox (
   sent_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_email_outbox_status ON email_outbox (status, created_at);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Site restructure: events marked as held, photographs linked to an event.
+   ADDITIVE ONLY, safe to re-run.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- 'auto' = decide from the date, 'held' = family has marked it as done,
+-- 'upcoming' = keep it listed as upcoming even if the date has passed.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS held_state TEXT NOT NULL DEFAULT 'auto';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS held_note TEXT DEFAULT '';
+
+-- Photographs of an event ("Photographs from the day"). NULL = not tied to an event.
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS event_id INT;
+CREATE INDEX IF NOT EXISTS idx_photos_event ON photos (event_id) WHERE event_id IS NOT NULL;

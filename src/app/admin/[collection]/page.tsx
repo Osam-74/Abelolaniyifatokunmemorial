@@ -30,6 +30,12 @@ export default async function CollectionPage({
     `SELECT * FROM ${collection.table} ORDER BY ${collection.orderBy}`
   );
 
+  // Events the family can attach photographs to (only needed on the photographs screen).
+  const eventChoices =
+    slug === 'photos'
+      ? await safeQuery<{ id: number; title: string }>('SELECT id, title FROM events ORDER BY event_date NULLS LAST, id')
+      : [];
+
   const statusLabel: Record<string, string> = {
     pending: 'Waiting for you',
     approved: 'Published',
@@ -49,6 +55,7 @@ export default async function CollectionPage({
           summary={<span className="font-display text-lg">Upload several photographs at once</span>}
         >
           <BatchPhotoUpload
+            events={eventChoices}
             albums={Array.from(
               new Set(rows.map((row) => String(row.album ?? '')).filter(Boolean))
             )}

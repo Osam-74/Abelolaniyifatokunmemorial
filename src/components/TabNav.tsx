@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const TABS = [
-  { href: '/about', label: 'About' },
-  { href: '/life', label: 'Life' },
+  { href: '/biography', label: 'Biography' },
+  { href: '/tributes', label: 'Tributes' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/stories', label: 'Stories' },
   { href: '/events', label: 'Funeral & Events' },

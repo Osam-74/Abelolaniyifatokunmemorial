@@ -9,8 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!base) return [];
 
   const pages = [
-    '', '/about', '/life-and-legacy', '/timeline', '/gallery', '/stories',
-    '/tributes', '/videos', '/events', '/guestbook', '/candles', '/quotes', '/media',
+    '', '/biography', '/tributes', '/gallery', '/stories', '/videos', '/events', '/guestbook',
   ];
 
   const stories = await safeQuery<{ slug: string; created_at: string }>(

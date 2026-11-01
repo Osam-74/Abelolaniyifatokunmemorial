@@ -87,7 +87,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
 
         <div className="mt-12 flex flex-wrap gap-3">
           <Link href="/stories#share" className="btn btn-primary">Share your own memory</Link>
-          <Link href="/about#tribute" className="btn btn-ghost">Leave a tribute</Link>
+          <Link href="/tributes#tribute" className="btn btn-ghost">Leave a tribute</Link>
         </div>
       </div>
     </article>

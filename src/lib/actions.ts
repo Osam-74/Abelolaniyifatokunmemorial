@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { query, hasDatabase } from './db';
+import { query, queryOne, hasDatabase } from './db';
 import { clientIpFrom, hashIp } from './clientIp';
 import { rateLimit, logSecurityEvent } from './rateLimit';
 import { screenText, filledTooFast } from './spam';
@@ -268,10 +268,20 @@ export async function submitPhotograph(_prev: FormState, form: FormData): Promis
   if (!g.ok) return g.state;
 
   const { reason } = decide(name, caption);
+
+  // A photograph sent from an event page is filed under that event (if it exists).
+  const rawEvent = Number(String(form.get('event_id') ?? ''));
+  let eventId: number | null = null;
+  let album = 'Shared by family & friends';
+  if (Number.isInteger(rawEvent) && rawEvent > 0) {
+    const ev = await queryOne<{ id: number; title: string }>('SELECT id, title FROM events WHERE id = $1', [rawEvent]);
+    if (ev) { eventId = ev.id; album = ev.title; }
+  }
+
   await query(
-    `INSERT INTO photos (url, caption, album, submitted_by, status, hold_reason, sort_order)
-     VALUES ($1, $2, $3, $4, 'pending', $5, (SELECT coalesce(max(sort_order), 0) + 1 FROM photos))`,
-    [url, caption, 'Shared by family & friends', name, reason]
+    `INSERT INTO photos (url, caption, album, submitted_by, status, hold_reason, event_id, sort_order)
+     VALUES ($1, $2, $3, $4, 'pending', $5, $6, (SELECT coalesce(max(sort_order), 0) + 1 FROM photos))`,
+    [url, caption, album, name, reason, eventId]
   );
   await notify(buildSubmissionNotice({
     kind: 'photo', name, summary: caption || '(no caption)', held: Boolean(reason), holdReason: reason,

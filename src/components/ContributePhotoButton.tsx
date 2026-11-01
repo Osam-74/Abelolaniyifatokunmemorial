@@ -11,7 +11,15 @@ type Stage = 'idle' | 'uploading' | 'ready' | 'sending' | 'done' | 'failed';
  * Opens the device photo picker straight away. Only once a picture is chosen
  * does anything else appear, so contributing is one tap from the sidebar.
  */
-export default function ContributePhotoButton() {
+export default function ContributePhotoButton({
+  eventId,
+  label = 'Add a photograph',
+  className = 'btn btn-primary mt-2 w-full',
+}: {
+  eventId?: number;
+  label?: string;
+  className?: string;
+} = {}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [stage, setStage] = useState<Stage>('idle');
   const [preview, setPreview] = useState('');
@@ -75,6 +83,7 @@ export default function ContributePhotoButton() {
     form.append('url', url);
     form.append('name', name.trim());
     form.append('caption', caption.trim());
+    if (eventId) form.append('event_id', String(eventId));
     // Anti-spam fields rendered by <FormGuard/> (time-trap stamp + Turnstile token, if enabled).
     guardRef.current?.querySelectorAll<HTMLInputElement>('input[name]').forEach((el) => {
       if (el.name === '_t' || el.name === 'cf-turnstile-response') form.append(el.name, el.value);
@@ -93,9 +102,9 @@ export default function ContributePhotoButton() {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="btn btn-primary mt-2 w-full"
+        className={className}
       >
-        Add a photograph
+        {label}
       </button>
 
       <input
